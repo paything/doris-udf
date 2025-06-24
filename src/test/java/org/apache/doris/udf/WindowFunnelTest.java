@@ -70,7 +70,7 @@ public class WindowFunnelTest {
         System.out.println();
         
         System.out.println("=== 测试8：backtrack模式（允许倒序） ===");
-        String input8 = "2024-01-01 00:00:00.000#1@0@0#step1,2024-01-01 00:00:00.200#0@0@1#step3,2024-01-01 00:00:00.100#0@1@0#step2";
+        String input8 = "2024-01-01 00:00:00.000#1@0@0#step1,2024-01-01 00:00:00.100#0@0@1#step3,2024-01-01 00:00:00.200#0@1@0#step2";
         System.out.println("输入数据: " + input8);
         System.out.println("窗口时长: 10秒");
         System.out.println("步骤间隔: 5秒");
@@ -80,7 +80,7 @@ public class WindowFunnelTest {
         System.out.println();
         
         System.out.println("=== 测试9：increase模式（严格递增） ===");
-        String input9 = "2024-01-01 00:00:00.000#1@0@0#step1,2024-01-01 00:00:00.000#0@1@0#step2,2024-01-01 00:00:00.100#0@0@1#step3";
+        String input9 = "2024-01-01 00:00:00.000#1@0@0#step1,2024-01-01 00:00:01.000#0@1@0#step2,2024-01-01 00:00:01.100#0@0@1#step3";
         System.out.println("输入数据: " + input9);
         System.out.println("窗口时长: 10秒");
         System.out.println("步骤间隔: 5秒");
@@ -90,7 +90,7 @@ public class WindowFunnelTest {
         System.out.println();
         
         System.out.println("=== 测试10：backtrack_long模式（30分钟回溯） ===");
-        String input10 = "2024-01-01 00:00:00.000#1@0@0#step1,2024-01-01 00:00:15.000#0@0@1#step3,2024-01-01 00:00:10.000#0@1@0#step2";
+        String input10 = "2024-01-01 00:31:00.000#1@0@0#step1,2024-01-01 00:31:15.000#0@1@0#step2,2024-01-01 00:31:00.000#0@0@1#step3";
         System.out.println("输入数据: " + input10);
         System.out.println("窗口时长: 60秒");
         System.out.println("步骤间隔: 20秒");

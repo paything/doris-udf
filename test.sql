@@ -1,6 +1,9 @@
 -- 如果换了jar包，先删除再创建
 DROP FUNCTION window_funnel(INT, INT, STRING, STRING) 
 
+-- 进入mysql，在mysql里面创建函数
+USE mysql;
+
 -- 创建udf
 CREATE FUNCTION window_funnel(INT, INT, STRING, STRING) RETURNS STRING PROPERTIES (
   "file"="file:///opt/apache-doris/jdbc_drivers/doris-udf-demo.jar",
@@ -31,7 +34,7 @@ select '2024-01-01 00:00:02.434' as dt,'cjt' as uid,'chat' as event,'fb' as grou
 )
 SELECT 
     uid,
-    kuro_comments_ai.window_funnel(10, 1, 'strict', funnel_track) as funnel_result
+    mysql.window_funnel(10, 1, 'strict', funnel_track) as funnel_result
 FROM (
     SELECT 
         uid,
@@ -62,7 +65,7 @@ select '2024-01-01 00:00:00.000' as dt,'user1' as uid,'chat' as event,'test' as 
 SELECT 
     'default_mode' as test_type,
     uid,
-    kuro_comments_ai.window_funnel(10, 5, 'default', funnel_track) as funnel_result
+    mysql.window_funnel(10, 5, 'default', funnel_track) as funnel_result
 FROM (
     SELECT 
         uid,
@@ -92,7 +95,7 @@ select '2024-01-01 00:00:00.100' as dt,'user2' as uid,'iap' as event,'test' as g
 SELECT 
     'backtrack_mode' as test_type,
     uid,
-    kuro_comments_ai.window_funnel(10, 5, 'backtrack', funnel_track) as funnel_result
+    mysql.window_funnel(10, 5, 'backtrack', funnel_track) as funnel_result
 FROM (
     SELECT 
         uid,
@@ -122,7 +125,7 @@ select '2024-01-01 00:00:00.100' as dt,'user3' as uid,'chat' as event,'test' as 
 SELECT 
     'increase_mode' as test_type,
     uid,
-    kuro_comments_ai.window_funnel(10, 5, 'increase', funnel_track) as funnel_result
+    mysql.window_funnel(10, 5, 'increase', funnel_track) as funnel_result
 FROM (
     SELECT 
         uid,

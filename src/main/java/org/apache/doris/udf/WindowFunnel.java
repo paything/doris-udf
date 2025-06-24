@@ -101,6 +101,11 @@ public class WindowFunnel extends UDF {
         stepTimestamps[0] = startEvent.timestamp;
         stepTags[0] = startEvent.group;
         
+        // 对于backtrack模式，需要特殊处理
+        if (MODE_BACKTRACK.equals(mode) || MODE_BACKTRACK_LONG.equals(mode)) {
+            return buildBacktrackPath(events, startIndex, windowSeconds, stepIntervalSeconds, stepCount, mode, stepTimestamps, stepTags);
+        }
+        
         // 查找后续步骤
         for (int eventIndex = startIndex + 1; eventIndex < events.size(); eventIndex++) {
             EventRow event = events.get(eventIndex);
@@ -126,6 +131,63 @@ public class WindowFunnel extends UDF {
         }
         
         // 构建路径结果
+        path.firstTimestamp = stepTimestamps[0];
+        path.stepCount = 0;
+        
+        // 计算时间差和收集标签
+        for (int i = 0; i < stepCount; i++) {
+            if (stepTimestamps[i] != null) {
+                path.stepCount++;
+                // 只有当存在前一个步骤时，才计算时间差
+                if (i > 0 && stepTimestamps[i-1] != null) {
+                    path.timeDiffs.add(stepTimestamps[i] - stepTimestamps[i-1]);
+                }
+                path.tags.add(stepTags[i]);
+            }
+        }
+        
+        return path.stepCount > 0 ? path : null;
+    }
+    
+    /**
+     * 构建回溯模式的路径
+     */
+    private FunnelPath buildBacktrackPath(List<EventRow> events, int startIndex, int windowSeconds, int stepIntervalSeconds, int stepCount, String mode, Long[] stepTimestamps, String[] stepTags) {
+        // 在时间窗口内找到所有事件
+        List<EventRow> windowEvents = new ArrayList<>();
+        long startTime = stepTimestamps[0];
+        
+        for (EventRow event : events) {
+            if (Math.abs(event.timestamp - startTime) <= windowSeconds * 1000L) {
+                windowEvents.add(event);
+            }
+        }
+        
+        // 为每个步骤找到最佳匹配的事件
+        for (int stepIndex = 1; stepIndex < stepCount; stepIndex++) {
+            Long bestTimestamp = null;
+            String bestTag = null;
+            long minInterval = Long.MAX_VALUE;
+            
+            for (EventRow event : windowEvents) {
+                if (event.steps[stepIndex] == 1) {
+                    long interval = Math.abs(event.timestamp - stepTimestamps[stepIndex - 1]);
+                    if (interval <= stepIntervalSeconds * 1000L && interval < minInterval) {
+                        minInterval = interval;
+                        bestTimestamp = event.timestamp;
+                        bestTag = event.group;
+                    }
+                }
+            }
+            
+            if (bestTimestamp != null) {
+                stepTimestamps[stepIndex] = bestTimestamp;
+                stepTags[stepIndex] = bestTag;
+            }
+        }
+        
+        // 构建路径结果
+        FunnelPath path = new FunnelPath();
         path.firstTimestamp = stepTimestamps[0];
         path.stepCount = 0;
         
