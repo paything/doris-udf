@@ -60,7 +60,7 @@ window_funnel(
 ## 在Doris中注册UDF
 
 ```sql
-CREATE FUNCTION window_funnel(int, int, string, string, string) 
+CREATE FUNCTION window_funnel(int, int, string, string) 
 RETURNS string 
 PROPERTIES (
     "file"="file:///path/to/doris-udf-demo-1.0.0-jar-with-dependencies.jar",
@@ -88,7 +88,7 @@ select '2024-01-01 00:00:02.434' as dt,'cjt' as uid,'chat' as event,'fb' as grou
 )
 SELECT 
     uid,
-    window_funnel(10, 1, 'strict', funnel_track, 'hk,cn,de') as funnel_result
+    window_funnel(10, 1, 'strict', funnel_track) as funnel_result
 FROM (
     SELECT 
         uid,

@@ -36,7 +36,7 @@ mvn clean package
 ### 2. 在Doris中注册UDF
 
 ```sql
-CREATE FUNCTION window_funnel(int, int, string, string, string) 
+CREATE FUNCTION window_funnel(int, int, string, string) 
 RETURNS string 
 PROPERTIES (
     "file"="file:///path/to/doris-udf-demo-1.0.0-jar-with-dependencies.jar",
@@ -52,7 +52,7 @@ PROPERTIES (
 -- 使用您提供的数据格式
 SELECT 
     uid,
-    window_funnel(10, 1, 'strict', funnel_track, 'hk,cn,de') as funnel_result
+    window_funnel(10, 1, 'strict', funnel_track) as funnel_result
 FROM (
     SELECT 
         uid,
