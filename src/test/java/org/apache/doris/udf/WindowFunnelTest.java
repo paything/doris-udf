@@ -39,5 +39,23 @@ public class WindowFunnelTest {
         System.out.println("步骤间隔: 5秒");
         String result4 = funnel.evaluate(10, 5, "strict", input4);
         System.out.println("输出结果: " + result4);
+        System.out.println();
+        
+        System.out.println("=== 测试5：路径长度为1（只有第一步） ===");
+        String input5 = "2024-01-01 00:00:00.123#1@0@0#step1,2024-01-01 00:00:01.345#0@0@0#step2,2024-01-01 00:00:02.111#0@0@0#step3";
+        System.out.println("输入数据: " + input5);
+        System.out.println("窗口时长: 10秒");
+        System.out.println("步骤间隔: 5秒");
+        String result5 = funnel.evaluate(10, 5, "strict", input5);
+        System.out.println("输出结果: " + result5);
+        System.out.println();
+        
+        System.out.println("=== 测试6：路径长度为2（只有前两步） ===");
+        String input6 = "2024-01-01 00:00:00.123#1@0@0#step1,2024-01-01 00:00:01.345#0@1@0#step2,2024-01-01 00:00:02.111#0@0@0#step3";
+        System.out.println("输入数据: " + input6);
+        System.out.println("窗口时长: 10秒");
+        System.out.println("步骤间隔: 5秒");
+        String result6 = funnel.evaluate(10, 5, "strict", input6);
+        System.out.println("输出结果: " + result6);
     }
 } 

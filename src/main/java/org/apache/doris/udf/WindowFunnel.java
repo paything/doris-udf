@@ -127,14 +127,11 @@ public class WindowFunnel extends UDF {
         for (int i = 0; i < stepCount; i++) {
             if (stepTimestamps[i] != null) {
                 path.stepCount++;
+                // 只有当存在前一个步骤时，才计算时间差
                 if (i > 0 && stepTimestamps[i-1] != null) {
                     path.timeDiffs.add(stepTimestamps[i] - stepTimestamps[i-1]);
-                } else if (i > 0) {
-                    path.timeDiffs.add(0L);
                 }
                 path.tags.add(stepTags[i]);
-            } else if (i > 0) {
-                path.timeDiffs.add(0L);
             }
         }
         
