@@ -22,7 +22,6 @@ doris-udf/
 │   │   └── WindowFunnel.java           # 漏斗分析UDF实现
 │   └── test/java/org/apache/doris/udf/
 │       └── WindowFunnelTest.java       # 测试类
-├── pom.xml                             # Maven配置文件
 ├── README.md                           # 项目说明
 ├── test.sql                            # Doris测试SQL脚本
 ├── build.bat                           # 编译脚本
