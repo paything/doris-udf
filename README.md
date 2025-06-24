@@ -77,7 +77,7 @@ select '2024-01-01 00:00:02.434' as dt,'cjt' as uid,'chat' as event,'fb' as grou
 )
 SELECT 
     uid,
-    window_funnel(10, 1, 'strict', funnel_track) as funnel_result
+    window_funnel(10, 1, 'default', funnel_track) as funnel_result
 FROM (
     SELECT 
         uid,
