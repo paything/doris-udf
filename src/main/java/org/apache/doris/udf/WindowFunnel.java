@@ -2,8 +2,12 @@ package org.apache.doris.udf;
 
 import org.apache.doris.udf.UDF;
 import java.util.*;
+import java.text.SimpleDateFormat;
 
 public class WindowFunnel extends UDF {
+    private static final SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+    private static final SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    
     /**
      * 通用漏斗分析UDF，按步骤顺序查找每步的第一个1，返回时间差和标签
      * @param windowSeconds 分析窗口时长（秒）
@@ -157,28 +161,18 @@ public class WindowFunnel extends UDF {
         return list;
     }
 
-    // 解析时间戳
+    // 解析时间戳 - 支持多种格式
     private long parseTimestamp(String timestamp) {
         try {
-            String[] parts = timestamp.split(" ");
-            String datePart = parts[0];
-            String timePart = parts[1];
-            String[] dateFields = datePart.split("-");
-            String[] timeFields = timePart.split(":");
-            String[] secondParts = timeFields[2].split("\\.");
-            int year = Integer.parseInt(dateFields[0]);
-            int month = Integer.parseInt(dateFields[1]);
-            int day = Integer.parseInt(dateFields[2]);
-            int hour = Integer.parseInt(timeFields[0]);
-            int minute = Integer.parseInt(timeFields[1]);
-            int second = Integer.parseInt(secondParts[0]);
-            int millisecond = secondParts.length > 1 ? Integer.parseInt(secondParts[1]) : 0;
-            Calendar cal = Calendar.getInstance();
-            cal.set(year, month - 1, day, hour, minute, second);
-            cal.set(Calendar.MILLISECOND, millisecond);
-            return cal.getTimeInMillis();
-        } catch (Exception e) {
-            return 0;
+            // 先尝试毫秒格式
+            return sdf1.parse(timestamp).getTime();
+        } catch (Exception e1) {
+            try {
+                // 再尝试秒格式
+                return sdf2.parse(timestamp).getTime();
+            } catch (Exception e2) {
+                return 0;
+            }
         }
     }
 
