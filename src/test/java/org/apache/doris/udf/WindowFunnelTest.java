@@ -4,24 +4,52 @@ public class WindowFunnelTest {
     public static void main(String[] args) {
         WindowFunnel windowFunnel = new WindowFunnel();
         
-        // 测试数据：2024-01-01 00:00:00.123#1@0@0#tiktok,2024-01-01 00:00:01.345#0@1@0#tiktok,2024-01-01 00:00:03.111#0@0@1#tiktok
-        String testEventString = "2024-01-01 00:00:00.123#1@0@0#tiktok,2024-01-01 00:00:01.345#0@1@0#tiktok,2024-01-01 00:00:03.111#0@0@1#tiktok";
+        // 测试数据1：包含多个不同标签的事件
+        String testEventString = "2024-01-01 00:00:00.123#1@0@0#tiktok,2024-01-01 00:00:01.345#0@1@0#fb,2024-01-01 00:00:03.111#0@0@1#wechat,2024-02-01 00:00:00.123#1@0@0#tiktok,2024-02-01 00:00:01.345#0@1@0#fb,2024-02-01 00:00:03.111#0@0@1#wechat";
+        
+        // 测试数据2：20个步骤的事件
+        String testEventString20 = "2024-01-01 00:00:00.000#1@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0#step1," +
+                                  "2024-01-01 00:00:00.100#0@1@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0#step2," +
+                                  "2024-01-01 00:00:00.200#0@0@1@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0#step3," +
+                                  "2024-01-01 00:00:00.300#0@0@0@1@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0#step4," +
+                                  "2024-01-01 00:00:00.400#0@0@0@0@1@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0#step5," +
+                                  "2024-01-01 00:00:00.500#0@0@0@0@0@1@0@0@0@0@0@0@0@0@0@0@0@0@0@0#step6," +
+                                  "2024-01-01 00:00:00.600#0@0@0@0@0@0@1@0@0@0@0@0@0@0@0@0@0@0@0@0#step7," +
+                                  "2024-01-01 00:00:00.700#0@0@0@0@0@0@0@1@0@0@0@0@0@0@0@0@0@0@0@0#step8," +
+                                  "2024-01-01 00:00:00.800#0@0@0@0@0@0@0@0@1@0@0@0@0@0@0@0@0@0@0@0#step9," +
+                                  "2024-01-01 00:00:00.900#0@0@0@0@0@0@0@0@0@1@0@0@0@0@0@0@0@0@0@0#step10," +
+                                  "2024-01-01 00:00:01.000#0@0@0@0@0@0@0@0@0@0@1@0@0@0@0@0@0@0@0@0#step11," +
+                                  "2024-01-01 00:00:01.100#0@0@0@0@0@0@0@0@0@0@0@1@0@0@0@0@0@0@0@0#step12," +
+                                  "2024-01-01 00:00:01.200#0@0@0@0@0@0@0@0@0@0@0@0@1@0@0@0@0@0@0@0#step13," +
+                                  "2024-01-01 00:00:01.300#0@0@0@0@0@0@0@0@0@0@0@0@0@1@0@0@0@0@0@0#step14," +
+                                  "2024-01-01 00:00:01.400#0@0@0@0@0@0@0@0@0@0@0@0@0@0@1@0@0@0@0@0#step15," +
+                                  "2024-01-01 00:00:01.500#0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@1@0@0@0@0#step16," +
+                                  "2024-01-01 00:00:01.600#0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@1@0@0@0#step17," +
+                                  "2024-01-01 00:00:01.700#0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@1@0@0#step18," +
+                                  "2024-01-01 00:00:01.800#0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@1@0#step19," +
+                                  "2024-01-01 00:00:01.900#0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@0@1#step20";
         
         // 测试参数
         Integer windowSeconds = 10; // 10秒窗口
-        Integer stepIntervalSeconds = 1; // 1秒间隔
+        Integer stepIntervalSeconds = 5; // 5秒间隔，允许更大的时间差
         String mode = "strict"; // 严格模式
-        String tagCol = "hk,cn,de"; // 标签列
         
-        // 执行测试
-        String result = windowFunnel.evaluate(windowSeconds, stepIntervalSeconds, mode, testEventString, tagCol);
-        
-        System.out.println("测试结果:");
+        System.out.println("=== 测试1：3步骤多路径 ===");
+        // 执行测试1
+        String result1 = windowFunnel.evaluate(windowSeconds, stepIntervalSeconds, mode, testEventString);
         System.out.println("输入数据: " + testEventString);
         System.out.println("窗口时长: " + windowSeconds + "秒");
         System.out.println("步骤间隔: " + stepIntervalSeconds + "秒");
         System.out.println("分析模式: " + mode);
-        System.out.println("标签列: " + tagCol);
-        System.out.println("输出结果: " + result);
+        System.out.println("输出结果: " + result1);
+        
+        System.out.println("\n=== 测试2：20步骤单路径 ===");
+        // 执行测试2
+        String result2 = windowFunnel.evaluate(windowSeconds, stepIntervalSeconds, mode, testEventString20);
+        System.out.println("输入数据: " + testEventString20);
+        System.out.println("窗口时长: " + windowSeconds + "秒");
+        System.out.println("步骤间隔: " + stepIntervalSeconds + "秒");
+        System.out.println("分析模式: " + mode);
+        System.out.println("输出结果: " + result2);
     }
 } 

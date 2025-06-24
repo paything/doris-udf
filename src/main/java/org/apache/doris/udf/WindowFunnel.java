@@ -10,65 +10,131 @@ public class WindowFunnel extends UDF {
      * @param stepIntervalSeconds 步骤间隔时长（秒）
      * @param mode 分析模式（可忽略）
      * @param eventString 事件字符串，格式：时间戳#0@1@0#group,...
-     * @param tagCol 标签列（可选）
      * @return 分析结果
      */
-    public String evaluate(Integer windowSeconds, Integer stepIntervalSeconds, String mode, String eventString, String tagCol) {
+    public String evaluate(Integer windowSeconds, Integer stepIntervalSeconds, String mode, String eventString) {
         if (eventString == null || eventString.isEmpty()) {
             return null;
         }
         try {
             List<EventRow> events = parseEventString(eventString);
             if (events.isEmpty()) return null;
+            
             // 按时间排序
             events.sort(Comparator.comparingLong(e -> e.timestamp));
             // 步骤数由第一个事件的steps长度决定
             int stepCount = events.get(0).steps.length;
-            // 查找每个步骤的第一个1
-            Long[] stepTimestamps = new Long[stepCount];
-            int foundStep = 0;
-            for (EventRow event : events) {
-                for (int i = 0; i < stepCount; i++) {
-                    if (stepTimestamps[i] == null && event.steps[i] == 1) {
-                        // 步骤必须按顺序推进
-                        if (i == 0 || stepTimestamps[i-1] != null) {
-                            // 检查窗口和间隔
-                            if (i == 0 || (event.timestamp - stepTimestamps[i-1] <= stepIntervalSeconds * 1000L)) {
-                                if (i == 0 || (event.timestamp - stepTimestamps[0] <= windowSeconds * 1000L)) {
-                                    stepTimestamps[i] = event.timestamp;
-                                }
-                            }
-                        }
-                    }
+            
+            // 查找所有符合条件的路径
+            List<FunnelPath> allPaths = new ArrayList<>();
+            
+            // 遍历每个可能的起始点
+            for (int startIndex = 0; startIndex < events.size(); startIndex++) {
+                EventRow startEvent = events.get(startIndex);
+                
+                // 检查是否可以作为第一个步骤
+                if (startEvent.steps[0] != 1) continue;
+                
+                // 尝试从这个起始点构建路径
+                FunnelPath path = buildPath(events, startIndex, windowSeconds, stepIntervalSeconds, stepCount);
+                if (path != null && path.stepCount > 0) {
+                    allPaths.add(path);
                 }
             }
-            // 只要第一个步骤发生就输出
-            if (stepTimestamps[0] == null) return "[]";
+            
+            // 如果没有找到任何路径
+            if (allPaths.isEmpty()) return "[]";
+            
+            // 构建结果数组
             StringBuilder sb = new StringBuilder("[");
-            sb.append(stepTimestamps[0]);
-            for (int i = 1; i < stepCount; i++) {
-                sb.append(",");
-                if (stepTimestamps[i] != null && stepTimestamps[i-1] != null) {
-                    sb.append(stepTimestamps[i] - stepTimestamps[i-1]);
-                } else {
-                    sb.append(0);
+            for (int i = 0; i < allPaths.size(); i++) {
+                FunnelPath path = allPaths.get(i);
+                
+                sb.append("[");
+                sb.append(path.firstTimestamp);
+                
+                // 添加时间差值
+                for (int j = 0; j < path.timeDiffs.size(); j++) {
+                    sb.append(",").append(path.timeDiffs.get(j));
                 }
-            }
-            // 标签
-            sb.append(",[");
-            if (tagCol != null && !tagCol.isEmpty()) {
-                String[] tags = tagCol.split(",");
-                for (int i = 0; i < tags.length; i++) {
-                    sb.append("\"").append(tags[i]).append("\"");
-                    if (i < tags.length - 1) sb.append(",");
+                
+                // 添加标签数组
+                sb.append(",[");
+                for (int k = 0; k < path.tags.size(); k++) {
+                    sb.append("\"").append(path.tags.get(k)).append("\"");
+                    if (k < path.tags.size() - 1) sb.append(",");
                 }
+                sb.append("]");
+                
+                sb.append("]");
+                if (i < allPaths.size() - 1) sb.append(",");
             }
-            sb.append("]]");
+            sb.append("]");
             return sb.toString();
+            
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
+    }
+    
+    /**
+     * 从指定起始点构建漏斗路径
+     */
+    private FunnelPath buildPath(List<EventRow> events, int startIndex, int windowSeconds, int stepIntervalSeconds, int stepCount) {
+        FunnelPath path = new FunnelPath();
+        Long[] stepTimestamps = new Long[stepCount];
+        String[] stepTags = new String[stepCount];
+        
+        // 设置第一个步骤
+        EventRow startEvent = events.get(startIndex);
+        stepTimestamps[0] = startEvent.timestamp;
+        stepTags[0] = startEvent.group;
+        
+        // 查找后续步骤
+        for (int eventIndex = startIndex + 1; eventIndex < events.size(); eventIndex++) {
+            EventRow event = events.get(eventIndex);
+            
+            // 检查是否在时间窗口内
+            if (event.timestamp - stepTimestamps[0] > windowSeconds * 1000L) {
+                break;
+            }
+            
+            // 检查每个步骤
+            for (int stepIndex = 1; stepIndex < stepCount; stepIndex++) {
+                if (stepTimestamps[stepIndex] == null && event.steps[stepIndex] == 1) {
+                    // 检查前一个步骤是否已找到
+                    if (stepTimestamps[stepIndex - 1] != null) {
+                        // 检查步骤间隔
+                        if (event.timestamp - stepTimestamps[stepIndex - 1] <= stepIntervalSeconds * 1000L) {
+                            stepTimestamps[stepIndex] = event.timestamp;
+                            stepTags[stepIndex] = event.group;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 构建路径结果
+        path.firstTimestamp = stepTimestamps[0];
+        path.stepCount = 0;
+        
+        // 计算时间差和收集标签
+        for (int i = 0; i < stepCount; i++) {
+            if (stepTimestamps[i] != null) {
+                path.stepCount++;
+                if (i > 0 && stepTimestamps[i-1] != null) {
+                    path.timeDiffs.add(stepTimestamps[i] - stepTimestamps[i-1]);
+                } else if (i > 0) {
+                    path.timeDiffs.add(0L);
+                }
+                path.tags.add(stepTags[i]);
+            } else if (i > 0) {
+                path.timeDiffs.add(0L);
+            }
+        }
+        
+        return path.stepCount > 0 ? path : null;
     }
 
     // 解析事件字符串
@@ -84,7 +150,8 @@ public class WindowFunnel extends UDF {
                 for (int i = 0; i < stepStrs.length; i++) {
                     steps[i] = "1".equals(stepStrs[i]) ? 1 : 0;
                 }
-                list.add(new EventRow(ts, steps));
+                String group = fields[2]; // 提取标签
+                list.add(new EventRow(ts, steps, group));
             }
         }
         return list;
@@ -119,9 +186,19 @@ public class WindowFunnel extends UDF {
     private static class EventRow {
         long timestamp;
         int[] steps;
-        EventRow(long ts, int[] steps) {
+        String group;
+        EventRow(long ts, int[] steps, String group) {
             this.timestamp = ts;
             this.steps = steps;
+            this.group = group;
         }
+    }
+    
+    // 漏斗路径
+    private static class FunnelPath {
+        long firstTimestamp;
+        List<Long> timeDiffs = new ArrayList<>();
+        List<String> tags = new ArrayList<>();
+        int stepCount;
     }
 } 
