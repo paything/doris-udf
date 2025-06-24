@@ -8,11 +8,17 @@ public class WindowFunnel extends UDF {
     private static final SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
     private static final SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     
+    // 分析模式常量
+    private static final String MODE_DEFAULT = "default";
+    private static final String MODE_BACKTRACK = "backtrack";
+    private static final String MODE_BACKTRACK_LONG = "backtrack_long";
+    private static final String MODE_INCREASE = "increase";
+    
     /**
      * 通用漏斗分析UDF，按步骤顺序查找每步的第一个1，返回时间差和标签
      * @param windowSeconds 分析窗口时长（秒）
      * @param stepIntervalSeconds 步骤间隔时长（秒）
-     * @param mode 分析模式（可忽略）
+     * @param mode 分析模式：default/backtrack/backtrack_long/increase
      * @param eventString 事件字符串，格式：时间戳#0@1@0#group,...
      * @return 分析结果
      */
@@ -40,7 +46,7 @@ public class WindowFunnel extends UDF {
                 if (startEvent.steps[0] != 1) continue;
                 
                 // 尝试从这个起始点构建路径
-                FunnelPath path = buildPath(events, startIndex, windowSeconds, stepIntervalSeconds, stepCount);
+                FunnelPath path = buildPath(events, startIndex, windowSeconds, stepIntervalSeconds, stepCount, mode);
                 if (path != null && path.stepCount > 0) {
                     allPaths.add(path);
                 }
@@ -85,7 +91,7 @@ public class WindowFunnel extends UDF {
     /**
      * 从指定起始点构建漏斗路径
      */
-    private FunnelPath buildPath(List<EventRow> events, int startIndex, int windowSeconds, int stepIntervalSeconds, int stepCount) {
+    private FunnelPath buildPath(List<EventRow> events, int startIndex, int windowSeconds, int stepIntervalSeconds, int stepCount, String mode) {
         FunnelPath path = new FunnelPath();
         Long[] stepTimestamps = new Long[stepCount];
         String[] stepTags = new String[stepCount];
@@ -109,8 +115,8 @@ public class WindowFunnel extends UDF {
                 if (stepTimestamps[stepIndex] == null && event.steps[stepIndex] == 1) {
                     // 检查前一个步骤是否已找到
                     if (stepTimestamps[stepIndex - 1] != null) {
-                        // 检查步骤间隔
-                        if (event.timestamp - stepTimestamps[stepIndex - 1] <= stepIntervalSeconds * 1000L) {
+                        // 根据模式检查步骤间隔
+                        if (isValidStepInterval(stepTimestamps[stepIndex - 1], event.timestamp, stepIntervalSeconds, mode)) {
                             stepTimestamps[stepIndex] = event.timestamp;
                             stepTags[stepIndex] = event.group;
                         }
@@ -136,6 +142,38 @@ public class WindowFunnel extends UDF {
         }
         
         return path.stepCount > 0 ? path : null;
+    }
+    
+    /**
+     * 根据分析模式验证步骤间隔是否有效
+     */
+    private boolean isValidStepInterval(long prevTimestamp, long currentTimestamp, int stepIntervalSeconds, String mode) {
+        long timeDiff = currentTimestamp - prevTimestamp;
+        long intervalMs = stepIntervalSeconds * 1000L;
+        
+        switch (mode) {
+            case MODE_DEFAULT:
+                // 默认模式：允许时间相等，间隔必须小于等于设定值
+                return timeDiff <= intervalMs;
+                
+            case MODE_BACKTRACK:
+                // 回溯模式：允许倒序，时间间隔取绝对值，允许5分钟回溯
+                long absTimeDiff = Math.abs(timeDiff);
+                return absTimeDiff <= intervalMs && timeDiff >= -300000L; // 5分钟 = 300000ms
+                
+            case MODE_BACKTRACK_LONG:
+                // 长回溯模式：允许倒序，时间间隔取绝对值，允许30分钟回溯
+                long absTimeDiffLong = Math.abs(timeDiff);
+                return absTimeDiffLong <= intervalMs && timeDiff >= -1800000L; // 30分钟 = 1800000ms
+                
+            case MODE_INCREASE:
+                // 递增模式：时间间隔必须严格递增，不允许相等
+                return timeDiff > 0 && timeDiff <= intervalMs;
+                
+            default:
+                // 默认使用default模式
+                return timeDiff <= intervalMs;
+        }
     }
 
     // 解析事件字符串

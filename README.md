@@ -24,6 +24,7 @@ doris-udf/
 │       └── WindowFunnelTest.java       # 测试类
 ├── pom.xml                             # Maven配置文件
 ├── README.md                           # 项目说明
+├── test.sql                            # Doris测试SQL脚本
 ├── build.bat                           # 编译脚本
 ├── build-jar.bat                       # JAR打包脚本
 ├── jar2doris.bat                       # JAR包部署到Doris容器脚本
@@ -96,6 +97,35 @@ FROM (
 ) t;
 ```
 
+## 测试SQL脚本
+
+项目提供了完整的测试SQL脚本 `test.sql`，包含：
+
+1. **UDF删除和创建**：
+   ```sql
+   -- 如果换了jar包，先删除再创建
+   DROP FUNCTION window_funnel(INT, INT, STRING, STRING) 
+   
+   -- 创建udf
+   CREATE FUNCTION window_funnel(INT, INT, STRING, STRING) RETURNS STRING PROPERTIES (
+     "file"="file:///opt/apache-doris/jdbc_drivers/doris-udf-demo.jar",
+     "symbol"="org.apache.doris.udf.WindowFunnel",
+     "always_nullable"="true",
+     "type"="JAVA_UDF"
+   );
+   ```
+
+2. **完整测试用例**：
+   - 包含多用户、多路径的测试数据
+   - 演示了完整的数据转换和漏斗分析流程
+   - 支持不同渠道（tiktok、fb）的对比分析
+
+3. **使用方法**：
+   ```bash
+   # 在Doris中执行测试脚本
+   mysql -h <doris-host> -P <port> -u <username> -p <password> < test.sql
+   ```
+
 ## 详细使用说明
 
 ### UDF函数签名
@@ -113,7 +143,11 @@ window_funnel(
 
 - **分析窗口时长秒** (INT): 漏斗分析的时间窗口，单位为秒
 - **步骤间隔时长秒** (INT): 相邻步骤之间的最大时间间隔，单位为秒
-- **分析模式** (STRING): 分析模式，如 "strict"（严格模式）
+- **分析模式** (STRING): 分析模式，支持以下四种模式：
+  - `default`: 默认模式，允许ABC触发时间相等（考虑到研发上报有时候会在同一个时间戳上报）
+  - `backtrack`: 允许事件倒序，时间间隔取ABS绝对值（避免研发上报有先后误差），如一个用户实际触发顺序为ACB，只要时间间隔符合分析要求，一样会被判定成ABC的路径，这个模式下允许事件往回倒5分钟，在这个模式下，会出现时间差为负值的情况，是正常的
+  - `backtrack_long`: 这个模式下设定为30分钟回溯
+  - `increase`: ABC触发时间间隔必须递增，不允许相等（可用于剔除重复日志的影响，或者是重复事件漏斗，如登录再到登录）
 - **事件字符串** (STRING): 多条事件拼接的字符串，格式见下
 
 ### 输入数据格式
@@ -201,6 +235,8 @@ build.bat         # 编译Java代码并生成JAR包
 
 ## 测试
 
+### Java单元测试
+
 运行测试验证功能：
 
 ```bash
@@ -211,6 +247,22 @@ build.bat
 - 3步骤多路径测试
 - 20步骤单路径测试
 - 混合时间格式测试（毫秒级和秒级）
+- 路径长度为1的边界测试
+- 路径长度为2的边界测试
+- 分析模式测试：
+  - default模式：允许时间相等
+  - backtrack模式：允许倒序，5分钟回溯
+  - backtrack_long模式：允许倒序，30分钟回溯
+  - increase模式：严格递增，不允许相等
+
+### Doris集成测试
+
+使用提供的测试SQL脚本：
+
+```bash
+# 执行test.sql进行完整测试
+mysql -h <doris-host> -P <port> -u <username> -p <password> < test.sql
+```
 
 ## 注意事项
 
@@ -220,3 +272,4 @@ build.bat
 4. 输入数据格式必须严格遵循规范
 5. 支持多路径、多步骤、毫秒级时间差
 6. 支持混合时间格式，自动识别毫秒级和秒级时间戳
+7. 更新JAR包后需要重新注册UDF函数
