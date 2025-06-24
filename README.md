@@ -24,7 +24,6 @@ doris-udf/
 │       └── WindowFunnelTest.java       # 测试类
 ├── pom.xml                             # Maven配置文件
 ├── README.md                           # 项目说明
-├── USAGE.md                            # 详细使用说明
 ├── build.bat                           # 编译脚本
 ├── build-jar.bat                       # JAR打包脚本
 ├── jar2doris.bat                       # JAR包部署到Doris容器脚本
@@ -82,12 +81,24 @@ FROM (
     SELECT 
         uid,
         group_concat(event_string) as funnel_track
-    FROM event_log
+    FROM (
+    select 
+        uid,
+        concat(dt,'#'
+        ,event='reg'
+        ,'@',event='iap'
+        ,'@',event='chat'
+        ,'#',group0
+        ) as event_string
+    from event_log
+) t1
     GROUP BY uid
 ) t;
 ```
 
-## UDF函数签名
+## 详细使用说明
+
+### UDF函数签名
 
 ```sql
 window_funnel(
@@ -98,12 +109,14 @@ window_funnel(
 )
 ```
 
+### 参数说明
+
 - **分析窗口时长秒** (INT): 漏斗分析的时间窗口，单位为秒
 - **步骤间隔时长秒** (INT): 相邻步骤之间的最大时间间隔，单位为秒
 - **分析模式** (STRING): 分析模式，如 "strict"（严格模式）
 - **事件字符串** (STRING): 多条事件拼接的字符串，格式见下
 
-## 输入数据格式
+### 输入数据格式
 
 事件字符串格式：`时间戳#事件1@事件2@...@事件N#标签`
 
@@ -120,7 +133,7 @@ window_funnel(
 - `事件1@事件2@...@事件N`: N个步骤的标志位，1表示发生，0表示未发生
 - `标签`: 每条事件的标签（如渠道、国家、步骤名等）
 
-## 输出格式
+### 输出格式
 
 返回JSON格式的二维数组，每个元素为一条完整路径：
 ```
@@ -174,9 +187,17 @@ docker exec <fe-container-name> mkdir -p /opt/apache-doris/jdbc_drivers
 docker exec <be-container-name> mkdir -p /opt/apache-doris/jdbc_drivers
 
 # 把jar包复制到对应文件夹
-docker cp target/doris-udf-demo.jar <fe-container-name>:/opt/apache-doris/jdbc_drivers/
-docker cp target/doris-udf-demo.jar <be-container-name>:/opt/apache-doris/jdbc_drivers/
+docker cp doris-udf-demo.jar <fe-container-name>:/opt/apache-doris/jdbc_drivers/
+docker cp doris-udf-demo.jar <be-container-name>:/opt/apache-doris/jdbc_drivers/
 ```
+
+## 构建JAR包
+
+```bash
+build.bat         # 编译Java代码并生成JAR包
+```
+
+生成的JAR包位于：`doris-udf-demo.jar`
 
 ## 测试
 
