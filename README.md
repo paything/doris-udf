@@ -49,7 +49,7 @@ jar2doris.bat     # 将JAR包复制到Doris的FE和BE容器中
 ### 3. 在Doris中注册UDF
 
 ```sql
-CREATE FUNCTION window_funnel(BIGINT, BIGINT, STRING, STRING) 
+CREATE FUNCTION window_funnel(INT, INT, STRING, STRING) 
 RETURNS STRING 
 PROPERTIES (
     "file"="file:///opt/apache-doris/jdbc_drivers/doris-udf-demo.jar",
@@ -98,8 +98,8 @@ window_funnel(
 )
 ```
 
-- **分析窗口时长秒** (BIGINT): 漏斗分析的时间窗口，单位为秒
-- **步骤间隔时长秒** (BIGINT): 相邻步骤之间的最大时间间隔，单位为秒
+- **分析窗口时长秒** (INT): 漏斗分析的时间窗口，单位为秒
+- **步骤间隔时长秒** (INT): 相邻步骤之间的最大时间间隔，单位为秒
 - **分析模式** (STRING): 分析模式，如 "strict"（严格模式）
 - **事件字符串** (STRING): 多条事件拼接的字符串，格式见下
 
