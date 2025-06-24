@@ -10,6 +10,7 @@
 - 支持标签分组，标签自动从事件字符串提取
 - 毫秒级时间戳精度
 - 支持多条漏斗路径输出
+- 支持混合时间格式（毫秒级和秒级）
 
 ## 项目结构
 
@@ -26,6 +27,7 @@ doris-udf/
 ├── USAGE.md                            # 详细使用说明
 ├── build.bat                           # 编译脚本
 ├── build-jar.bat                       # JAR打包脚本
+├── jar2doris.bat                       # JAR包部署到Doris容器脚本
 ├── doris-udf-demo.jar                  # 编译生成的JAR包
 └── target/                             # 编译输出目录
 ```
@@ -35,24 +37,29 @@ doris-udf/
 ### 1. 编译与打包
 
 ```bash
-build.bat         # 编译Java代码
-build-jar.bat     # 打包生成 doris-udf-demo.jar
+build.bat         # 编译Java代码并生成JAR包
 ```
 
-### 2. 在Doris中注册UDF
+### 2. 部署到Doris容器
+
+```bash
+jar2doris.bat     # 将JAR包复制到Doris的FE和BE容器中
+```
+
+### 3. 在Doris中注册UDF
 
 ```sql
-CREATE FUNCTION window_funnel(int, int, string, string) 
-RETURNS string 
+CREATE FUNCTION window_funnel(BIGINT, BIGINT, STRING, STRING) 
+RETURNS STRING 
 PROPERTIES (
-    "file"="file:///path/to/doris-udf-demo.jar",
+    "file"="file:///opt/apache-doris/jdbc_drivers/doris-udf-demo.jar",
     "symbol"="org.apache.doris.udf.WindowFunnel",
     "always_nullable"="true",
     "type"="JAVA_UDF"
 );
 ```
 
-### 3. 使用示例
+### 4. 使用示例
 
 ```sql
 with event_log as (
@@ -91,10 +98,10 @@ window_funnel(
 )
 ```
 
-- **分析窗口时长秒** (int): 漏斗分析的时间窗口，单位为秒
-- **步骤间隔时长秒** (int): 相邻步骤之间的最大时间间隔，单位为秒
-- **分析模式** (string): 分析模式，如 "strict"（严格模式）
-- **事件字符串** (string): 多条事件拼接的字符串，格式见下
+- **分析窗口时长秒** (BIGINT): 漏斗分析的时间窗口，单位为秒
+- **步骤间隔时长秒** (BIGINT): 相邻步骤之间的最大时间间隔，单位为秒
+- **分析模式** (STRING): 分析模式，如 "strict"（严格模式）
+- **事件字符串** (STRING): 多条事件拼接的字符串，格式见下
 
 ## 输入数据格式
 
@@ -109,7 +116,7 @@ window_funnel(
 2024-01-01 00:00:00.000#1@0@0@...@0#step1,2024-01-01 00:00:00.100#0@1@0@...@0#step2,...,2024-01-01 00:00:01.900#0@0@...@1#step20
 ```
 
-- `时间戳`: 格式为 `YYYY-MM-DD HH:mm:ss.SSS`
+- `时间戳`: 格式为 `YYYY-MM-DD HH:mm:ss.SSS` 或 `YYYY-MM-DD HH:mm:ss`
 - `事件1@事件2@...@事件N`: N个步骤的标志位，1表示发生，0表示未发生
 - `标签`: 每条事件的标签（如渠道、国家、步骤名等）
 
@@ -137,19 +144,52 @@ window_funnel(
 ]
 ```
 
+## 部署说明
+
+### 使用jar2doris.bat脚本
+
+1. **前提条件**：
+   - Docker容器已启动
+   - 容器名称分别为：`doris-docker-fe-1` 和 `doris-docker-be-1`
+   - 已运行 `build.bat` 生成JAR包
+
+2. **执行部署**：
+   ```bash
+   jar2doris.bat
+   ```
+
+3. **脚本功能**：
+   - 检查JAR文件是否存在
+   - 在FE和BE容器中创建目录 `/opt/apache-doris/jdbc_drivers/`
+   - 复制JAR包到两个容器中
+   - 显示注册UDF的SQL语句
+
+### 手动部署
+
+如果容器名称不同，可以手动执行：
+
+```bash
+# 在be、fe创建文件夹
+docker exec <fe-container-name> mkdir -p /opt/apache-doris/jdbc_drivers
+docker exec <be-container-name> mkdir -p /opt/apache-doris/jdbc_drivers
+
+# 把jar包复制到对应文件夹
+docker cp target/doris-udf-demo.jar <fe-container-name>:/opt/apache-doris/jdbc_drivers/
+docker cp target/doris-udf-demo.jar <be-container-name>:/opt/apache-doris/jdbc_drivers/
+```
+
 ## 测试
 
 运行测试验证功能：
 
 ```bash
-java -cp target/classes org.apache.doris.udf.WindowFunnelTest
-```
-
-或直接运行批处理脚本：
-
-```bash
 build.bat
 ```
+
+测试包括：
+- 3步骤多路径测试
+- 20步骤单路径测试
+- 混合时间格式测试（毫秒级和秒级）
 
 ## 注意事项
 
@@ -158,3 +198,4 @@ build.bat
 3. 函数注册需要相应权限
 4. 输入数据格式必须严格遵循规范
 5. 支持多路径、多步骤、毫秒级时间差
+6. 支持混合时间格式，自动识别毫秒级和秒级时间戳
