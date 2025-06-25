@@ -6648,6 +6648,102 @@ _**User**_
 
 _**Assistant**_
 
+我看到问题了！从测试结果来看，标签后面多了一个逗号，比如 `"step1,"`、`"step2,"`、`"step3,"`。
+
+**问题分析：**
+这是因为在 `findNextEventStart` 方法中，我们查找下一个时间戳时，没有正确处理当前事件的结束位置。当找到下一个时间戳时，我们把它作为当前事件的结束位置，但实际上当前事件应该结束在下一个时间戳之前。
+
+让我检查并修复这个问题：
+
+
+---
+
+Read file: src/main/java/org/apache/doris/udf/WindowFunnel.java
+
+---
+
+我发现问题了！在 `parseEventString` 方法中，我们提取事件时包含了下一个事件的时间戳，导致标签后面多了一个逗号。
+
+**问题分析：**
+```java
+// 找到下一个事件的开始位置（下一个时间戳的开始）
+int nextEventStart = findNextEventStart(eventString, secondHashIndex + 1);
+
+// 提取当前事件
+String part = eventString.substring(startIndex, nextEventStart);
+```
+
+这里 `nextEventStart` 指向下一个事件的时间戳开始位置，但我们把它作为当前事件的结束位置，导致当前事件包含了下一个事件的时间戳。
+
+**解决方案：**
+我们需要在找到下一个事件开始位置后，回退到逗号的位置，或者直接使用逗号作为分隔符。
+
+让我修复这个问题：
+
+
+---
+
+
+
+---
+
+让我重新尝试，使用更简单的方法：
+
+
+---
+
+Cancelled
+
+---
+
+_**User**_
+
+咨询一个问题，如果时间戳格式带毫秒，这段代码执行会有问题吗，帮我解释以下
+
+---
+
+_**Assistant**_
+
+你的问题非常好！我们来详细分析一下 `findNextEventStart` 这段代码在遇到带毫秒的时间戳时会不会有问题。
+
+### 代码回顾
+
+```java
+// 找到下一个事件的开始位置
+private int findNextEventStart(String eventString, int startIndex) {
+    // 查找下一个时间戳模式：YYYY-MM-DD HH:mm:ss
+    for (int i = startIndex; i < eventString.length() - 18; i++) {
+        if (eventString.charAt(i) == '2' && 
+            eventString.charAt(i + 4) == '-' && 
+            eventString.charAt(i + 7) == '-' && 
+            eventString.charAt(i + 10) == ' ' && 
+            eventString.charAt(i + 13) == ':' && 
+            eventString.charAt(i + 16) == ':') {
+            return i;
+        }
+    }
+    return eventString.length();
+}
+```
+
+### 你的疑问
+
+**如果时间戳格式是 `yyyy-MM-dd HH:mm:ss.SSS`（带毫秒），这段代码会有问题吗？**
+
+### 详细解释
+
+#### 1. 这段代码的作用
+
+---
+
+_**User**_
+
+这个方法会不会太蠢了，有没有看上去更简洁聪明的做法
+
+---
+
+_**Assistant**_
+
 
 
 ---

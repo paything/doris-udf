@@ -3,6 +3,7 @@ package org.apache.doris.udf;
 import org.apache.doris.udf.UDF;
 import java.util.*;
 import java.text.SimpleDateFormat;
+import java.util.regex.*;
 
 public class WindowFunnel extends UDF {
     private static final SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
@@ -241,64 +242,25 @@ public class WindowFunnel extends UDF {
     // 解析事件字符串
     private List<EventRow> parseEventString(String eventString) {
         List<EventRow> list = new ArrayList<>();
-        
-        // 使用更智能的分割方法，处理标签中包含逗号的情况
-        int startIndex = 0;
-        while (startIndex < eventString.length()) {
-            // 找到第一个#的位置（时间戳结束）
-            int firstHashIndex = eventString.indexOf('#', startIndex);
-            if (firstHashIndex == -1) break;
-            
-            // 找到第二个#的位置（步骤标志结束）
-            int secondHashIndex = eventString.indexOf('#', firstHashIndex + 1);
-            if (secondHashIndex == -1) break;
-            
-            // 找到下一个事件的开始位置（下一个时间戳的开始）
-            int nextEventStart = findNextEventStart(eventString, secondHashIndex + 1);
-            
-            // 提取当前事件（不包含下一个事件的时间戳）
-            String part;
-            if (nextEventStart < eventString.length()) {
-                // 如果有下一个事件，找到当前事件的结束位置（逗号位置）
-                int commaIndex = eventString.lastIndexOf(',', nextEventStart - 1);
-                if (commaIndex > startIndex) {
-                    part = eventString.substring(startIndex, commaIndex);
-                } else {
-                    part = eventString.substring(startIndex, nextEventStart);
-                }
-            } else {
-                // 如果是最后一个事件，直接取到字符串末尾
-                part = eventString.substring(startIndex);
-            }
-            
-            // 解析事件
-            EventRow event = parseSingleEvent(part);
+        // 匹配每个事件的起点（带或不带毫秒）
+        Pattern pattern = Pattern.compile("(?=\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?#)");
+        Matcher matcher = pattern.matcher(eventString);
+        List<Integer> indices = new ArrayList<>();
+        while (matcher.find()) {
+            indices.add(matcher.start());
+        }
+        indices.add(eventString.length()); // 结尾
+
+        for (int i = 0; i < indices.size() - 1; i++) {
+            String part = eventString.substring(indices.get(i), indices.get(i + 1));
+            EventRow event = parseSingleEvent(part.replaceAll("^,|,$", "")); // 去除首尾逗号
             if (event != null) {
                 list.add(event);
             }
-            
-            // 移动到下一个事件
-            startIndex = nextEventStart;
         }
-        
         return list;
     }
     
-    // 找到下一个事件的开始位置
-    private int findNextEventStart(String eventString, int startIndex) {
-        // 查找下一个时间戳模式：YYYY-MM-DD HH:mm:ss
-        for (int i = startIndex; i < eventString.length() - 18; i++) {
-            if (eventString.charAt(i) == '2' && 
-                eventString.charAt(i + 4) == '-' && 
-                eventString.charAt(i + 7) == '-' && 
-                eventString.charAt(i + 10) == ' ' && 
-                eventString.charAt(i + 13) == ':' && 
-                eventString.charAt(i + 16) == ':') {
-                return i;
-            }
-        }
-        return eventString.length();
-    }
     
     // 解析单个事件
     private EventRow parseSingleEvent(String part) {
