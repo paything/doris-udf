@@ -437,7 +437,7 @@ select * from (
             ,funnel_result
             ,e1 as funnel_path
             ,cast(cast(array_slice(cast(e1 as ARRAY<varchar>),-1,1) as array<string>)[1] as array<string>)[1] as group0
-            ,abs(array_sum(array_popfront(array_popback(array_slice(cast(e1 as ARRAY<bigint>),1)))))/1000 as duration_sum_second
+            ,abs(array_sum(array_popfront(array_popback(cast(e1 as ARRAY<bigint>)))))/1000 as duration_sum_second
             ,array_size(cast(e1 as ARRAY<bigint>))-1 as step_count
             from 
             track_udf
@@ -455,14 +455,14 @@ and step_count=funnel_track_max_step
 -- select 
 -- uid
 -- ,group0
--- ,array_popback(array_slice(cast(funnel_path as ARRAY<bigint>),1)) as funnel_track 
+-- ,array_popback(cast(funnel_path as ARRAY<int>)) as funnel_track 
 -- from track_explode
 
 --模式2，只保留第一条路径，按时间排序后最早的第一条
 -- select 
 -- uid
 -- ,group0
--- ,array_popback(array_slice(cast(funnel_path as ARRAY<bigint>),1)) as funnel_track 
+-- ,array_popback(cast(funnel_path as ARRAY<int>)) as funnel_track 
 -- from track_explode
 -- where path_rank=1
 
@@ -470,64 +470,26 @@ and step_count=funnel_track_max_step
 select 
 uid
 ,group0
-,array_popback(array_slice(cast(max_by(funnel_path,duration_sum_second) as ARRAY<bigint>),1)) as funnel_track 
--- ,array_popback(array_slice(cast(min_by(funnel_path,duration_sum_second) as ARRAY<bigint>),1)) as funnel_track 
+,array_popback(cast(max_by(funnel_path,duration_sum_second) as ARRAY<int>)) as funnel_track 
+-- ,array_popback(cast(min_by(funnel_path,duration_sum_second) as ARRAY<int>)) as funnel_track 
 from track_explode
 group by uid,group0
-
-
 )
+
+
 select
   ifnull (group0, 'Total') as group0,
   funnel_level as rank,
   count(distinct uid) as value,
   count(1) as path_count,
-  if (funnel_level = 1, NULL, round(avg(duration), 1)) as `avg`,
-  cast(
-    if (funnel_level = 1, NULL, percentile (duration, 0)) as int
-  ) as p0,
-  cast(
-    if (
-      funnel_level = 1,
-      NULL,
-      percentile (duration, 0.25)
-    ) as int
-  ) as p25,
-  cast(
-    if (
-      funnel_level = 1,
-      NULL,
-      percentile (duration, 0.5)
-    ) as int
-  ) as p50,
-  cast(
-    if (
-      funnel_level = 1,
-      NULL,
-      percentile (duration, 0.75)
-    ) as int
-  ) as p75,
-  cast(
-    if (
-      funnel_level = 1,
-      NULL,
-      percentile (duration, 0.90)
-    ) as int
-  ) as p100,
-  if (
-    funnel_level = 1,
-    NULL,
-    percentile (duration, 0.75) + 1.5 * (
-      percentile (duration, 0.75) - percentile (duration, 0.25)
-    )
-  ) as 'Q3+1_5IQR',
-  if (
-    funnel_level = 1,
-    NULL,
-    percentile (duration, 0.25) -1.5 * (
-      percentile (duration, 0.75) - percentile (duration, 0.25)
-    )
-  ) as 'Q1-1_5IQR'
+  round(avg(duration), 1) as `avg`,
+  cast(percentile(duration, 0) as int) as p0,
+  cast(percentile(duration, 0.25) as int) as p25,
+  cast(percentile(duration, 0.5) as int) as p50,
+  cast(percentile(duration, 0.75) as int) as p75,
+  cast(percentile(duration, 0.90) as int) as p100,
+  percentile(duration, 0.75) + 1.5 * (percentile(duration, 0.75) - percentile(duration, 0.25)) as 'Q3+1_5IQR',
+  percentile(duration, 0.25) -1.5 * (percentile(duration, 0.75) - percentile(duration, 0.25)) as 'Q1-1_5IQR'
 from
   (
     SELECT
@@ -545,7 +507,7 @@ where
 group by
   grouping sets ((funnel_level), (group0, funnel_level))
 order by
-  ifnull (group0, '总体'),
+  ifnull (group0, 'Total'),
   funnel_level
 ;
 ```
