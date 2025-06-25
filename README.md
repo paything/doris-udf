@@ -39,7 +39,7 @@ doris-udf/
 build.bat         # 编译Java代码并生成JAR包
 ```
 
-### 2. 部署到Doris容器
+### 2. 部署到Doris容器（Doris v2.1.8）
 
 ```bash
 jar2doris.bat     # 将JAR包复制到Doris的FE和BE容器中
