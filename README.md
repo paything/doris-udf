@@ -146,7 +146,7 @@ select *
 ### UDF函数签名
 
 ```sql
-window_funnel(
+window_funnel_track(
     分析窗口时长秒,
     步骤间隔时长秒,
     分析模式,
