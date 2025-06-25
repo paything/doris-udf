@@ -256,8 +256,20 @@ public class WindowFunnel extends UDF {
             // 找到下一个事件的开始位置（下一个时间戳的开始）
             int nextEventStart = findNextEventStart(eventString, secondHashIndex + 1);
             
-            // 提取当前事件
-            String part = eventString.substring(startIndex, nextEventStart);
+            // 提取当前事件（不包含下一个事件的时间戳）
+            String part;
+            if (nextEventStart < eventString.length()) {
+                // 如果有下一个事件，找到当前事件的结束位置（逗号位置）
+                int commaIndex = eventString.lastIndexOf(',', nextEventStart - 1);
+                if (commaIndex > startIndex) {
+                    part = eventString.substring(startIndex, commaIndex);
+                } else {
+                    part = eventString.substring(startIndex, nextEventStart);
+                }
+            } else {
+                // 如果是最后一个事件，直接取到字符串末尾
+                part = eventString.substring(startIndex);
+            }
             
             // 解析事件
             EventRow event = parseSingleEvent(part);
