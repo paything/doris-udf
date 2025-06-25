@@ -183,13 +183,13 @@ select *
 ```
 excuting test.sql ...
 +-------+----------+--------------------------------------------------------------------+--------------------------------------------------------------+
-| uid   | link_col | funnel_result                                                      | e1                                                           |
-+-------+----------+--------------------------------------------------------------------+--------------------------------------------------------------+
-| payne | tiktok#1 | [[1704067200123,1222,1766,["tiktok#1","tiktok#1","tiktok#1"]]]     | [1704067200123,1222,1766,["tiktok#1","tiktok#1","tiktok#1"]] |
-| payne | fb@,#2   | [[1706745600012,989,["fb@,#2","fb@,#2"]]]                          | [1706745600012,989,["fb@,#2","fb@,#2"]]                      |
-| cjt   | f@#,b    | [[1704067200012,["f@#,b"]],[1704153600012,3000,["f@#,b","f@#,b"]]] | [1704067200012,["f@#,b"]]                                    |
+| uid   | link_col | funnel_result                                                      | e1                                                           |     
++-------+----------+--------------------------------------------------------------------+--------------------------------------------------------------+     
+| payne | tiktok#1 | [[1704067200123,1222,1766,["tiktok#1","tiktok#1","tiktok#1"]]]     | [1704067200123,1222,1766,["tiktok#1","tiktok#1","tiktok#1"]] |     
+| payne | fb@,#2   | [[1706745600012,989,["fb@,#2","fb@,#2"]]]                          | [1706745600012,989,["fb@,#2","fb@,#2"]]                      |     
+| cjt   | f@#,b    | [[1704067200012,["f@#,b"]],[1704153600012,3000,["f@#,b","f@#,b"]]] | [1704067200012,["f@#,b"]]                                    |     
 | cjt   | f@#,b    | [[1704067200012,["f@#,b"]],[1704153600012,3000,["f@#,b","f@#,b"]]] | [1704153600012,3000,["f@#,b","f@#,b"]]                       |
-+-------+----------+--------------------------------------------------------------------+--------------------------------------------------------------+
++-------+----------+--------------------------------------------------------------------+--------------------------------------------------------------+     
 +----------------+-------+---------------------------------------------------------+
 | test_type      | uid   | funnel_result                                           |
 +----------------+-------+---------------------------------------------------------+
@@ -200,6 +200,20 @@ excuting test.sql ...
 +---------------+-------+------------------------------+
 | increase_mode | user3 | [[1704067200000,["te@st1"]]] |
 +---------------+-------+------------------------------+
++----------+------+-------+------------+------+------+------+------+------+------+-----------+-----------+
+| group0   | rank | value | path_count | avg  | p0   | p25  | p50  | p75  | p100 | Q3+1_5IQR | Q1-1_5IQR |
++----------+------+-------+------------+------+------+------+------+------+------+-----------+-----------+
+| Total    |    1 |     2 |          3 | NULL | NULL | NULL | NULL | NULL | NULL |      NULL |      NULL |
+| Total    |    2 |     2 |          3 |  1.7 |    0 |    0 |    1 |    2 |    2 |      4.25 |     -1.75 |
+| Total    |    3 |     1 |          1 |  1.8 |    1 |    1 |    1 |    1 |    1 |         1 |         1 |
+| f@#,b    |    1 |     1 |          1 | NULL | NULL | NULL | NULL | NULL | NULL |      NULL |      NULL |
+| f@#,b    |    2 |     1 |          1 |    3 |    3 |    3 |    3 |    3 |    3 |         3 |         3 |
+| fb@,#2   |    1 |     1 |          1 | NULL | NULL | NULL | NULL | NULL | NULL |      NULL |      NULL |
+| fb@,#2   |    2 |     1 |          1 |    1 |    0 |    0 |    0 |    0 |    0 |         0 |         0 |
+| tiktok#1 |    1 |     1 |          1 | NULL | NULL | NULL | NULL | NULL | NULL |      NULL |      NULL |
+| tiktok#1 |    2 |     1 |          1 |  1.2 |    1 |    1 |    1 |    1 |    1 |         1 |         1 |
+| tiktok#1 |    3 |     1 |          1 |  1.8 |    1 |    1 |    1 |    1 |    1 |         1 |         1 |
++----------+------+-------+------------+------+------+------+------+------+------+-----------+-----------+
 请按任意键继续. . . 
 ```
 
@@ -354,3 +368,184 @@ docker cp doris-udf-demo.jar <be-container-name>:/opt/apache-doris/jdbc_drivers/
 5. 支持多路径、多步骤、毫秒级时间差
 6. 支持混合时间格式，自动识别毫秒级和秒级时间戳
 7. 更新JAR包后需要重新注册UDF函数
+
+## 直接输出分析结果的SQL示例
+
+```sql
+with event_log as (
+select '2024-01-01 00:00:00.123' as dt,'payne' as uid,'reg' as event,'tiktok#1' as group0
+union all
+select '2024-01-01 00:00:01.345' as dt,'payne' as uid,'iap' as event,'tiktok#1' as group0
+union all
+select '2024-01-01 00:00:03.111' as dt,'payne' as uid,'chat' as event,'tiktok#1' as group0
+union all
+select '2024-02-01 00:00:00.012' as dt,'payne' as uid,'reg' as event,'fb@,#2' as group0
+union all
+select '2024-02-01 00:00:01.001' as dt,'payne' as uid,'iap' as event,'fb@,#2' as group0
+union all
+select '2024-02-01 00:00:02.434' as dt,'payne' as uid,'chat' as event,'fb' as group0
+union all
+select '2024-01-01 00:00:00.012' as dt,'cjt' as uid,'reg' as event,'f@#,b' as group0
+union all
+select '2024-01-01 00:00:01.001' as dt,'cjt' as uid,'iap' as event,'f@#,@#,b' as group0
+union all
+select '2024-01-01 00:00:02.434' as dt,'cjt' as uid,'chat' as event,'fb' as group0
+union all
+select '2024-01-02 00:00:00.012' as dt,'cjt' as uid,'reg' as event,'f@#,b' as group0
+union all
+select '2024-01-02 00:00:03.012' as dt,'cjt' as uid,'iap' as event,'f@#,b' as group0
+)
+, track_udf as (
+    SELECT 
+        uid,
+        group0 as link_col, --关联属性列，不需要就去掉
+        window_funnel_track(
+            10, 
+            5, 
+            'default', 
+            group_concat(_event_string)
+        ) as funnel_result
+    FROM (
+        select 
+            *,
+            concat(dt,'#'
+            ,event='reg'
+            ,'@',event='iap'
+            ,'@',event='chat'
+            ,'#',group0
+            ) as _event_string
+        from event_log
+    ) t1
+    GROUP BY 
+    uid
+    ,link_col  --关联属性列，不需要就去掉
+)
+,track_explode as (
+select * from (
+    select uid
+    ,group0
+    ,funnel_result
+    ,funnel_path
+    ,ifnull(duration_sum_second,0) as duration_sum_second
+    ,step_count
+    ,max(step_count) over(partition by uid,funnel_result) as funnel_track_max_step
+    ,row_number() over(partition by uid,group0 order by funnel_path) as path_rank
+    from (     
+        select 
+            uid
+            ,link_col
+            ,funnel_result
+            ,e1 as funnel_path
+            ,cast(cast(array_slice(cast(e1 as ARRAY<varchar>),-1,1) as array<string>)[1] as array<string>)[1] as group0
+            ,abs(array_sum(array_popfront(array_popback(array_slice(cast(e1 as ARRAY<bigint>),1)))))/1000 as duration_sum_second
+            ,array_size(cast(e1 as ARRAY<bigint>))-1 as step_count
+            from 
+            track_udf
+            lateral view EXPLODE(cast(funnel_result as ARRAY<varchar>)) tmp as e1
+        ) t1
+) t2 where 1=1 
+--只保留最深的漏斗时，加上这个过滤，否则去掉
+and step_count=funnel_track_max_step
+--只保留最深的漏斗时，加上这个过滤，否则去掉
+)
+
+----1个用户有N个路径满足诉求时，有4个处理模式
+,path_filter_mode as (
+--模式1，全路径保留，无需任何处理
+-- select 
+-- uid
+-- ,group0
+-- ,array_popback(array_slice(cast(funnel_path as ARRAY<bigint>),1)) as funnel_track 
+-- from track_explode
+
+--模式2，只保留第一条路径，按时间排序后最早的第一条
+-- select 
+-- uid
+-- ,group0
+-- ,array_popback(array_slice(cast(funnel_path as ARRAY<bigint>),1)) as funnel_track 
+-- from track_explode
+-- where path_rank=1
+
+--模式3/4保留1条整体耗时最长/最短的路径
+select 
+uid
+,group0
+,array_popback(array_slice(cast(max_by(funnel_path,duration_sum_second) as ARRAY<bigint>),1)) as funnel_track 
+-- ,array_popback(array_slice(cast(min_by(funnel_path,duration_sum_second) as ARRAY<bigint>),1)) as funnel_track 
+from track_explode
+group by uid,group0
+
+
+)
+select
+  ifnull (group0, 'Total') as group0,
+  funnel_level as rank,
+  count(distinct uid) as value,
+  count(1) as path_count,
+  if (funnel_level = 1, NULL, round(avg(duration), 1)) as `avg`,
+  cast(
+    if (funnel_level = 1, NULL, percentile (duration, 0)) as int
+  ) as p0,
+  cast(
+    if (
+      funnel_level = 1,
+      NULL,
+      percentile (duration, 0.25)
+    ) as int
+  ) as p25,
+  cast(
+    if (
+      funnel_level = 1,
+      NULL,
+      percentile (duration, 0.5)
+    ) as int
+  ) as p50,
+  cast(
+    if (
+      funnel_level = 1,
+      NULL,
+      percentile (duration, 0.75)
+    ) as int
+  ) as p75,
+  cast(
+    if (
+      funnel_level = 1,
+      NULL,
+      percentile (duration, 0.90)
+    ) as int
+  ) as p100,
+  if (
+    funnel_level = 1,
+    NULL,
+    percentile (duration, 0.75) + 1.5 * (
+      percentile (duration, 0.75) - percentile (duration, 0.25)
+    )
+  ) as 'Q3+1_5IQR',
+  if (
+    funnel_level = 1,
+    NULL,
+    percentile (duration, 0.25) -1.5 * (
+      percentile (duration, 0.75) - percentile (duration, 0.25)
+    )
+  ) as 'Q1-1_5IQR'
+from
+  (
+    SELECT
+      uid,
+      group0,
+      funnel_track,
+      abs(funnel_track[e1] / 1000) as duration,
+      e1 as funnel_level
+    FROM
+      path_filter_mode 
+      lateral VIEW explode (array_enumerate (funnel_track)) tmp1 AS e1
+  ) t
+where
+  funnel_level >= 1
+group by
+  grouping sets ((funnel_level), (group0, funnel_level))
+order by
+  ifnull (group0, '总体'),
+  funnel_level
+;
+```
