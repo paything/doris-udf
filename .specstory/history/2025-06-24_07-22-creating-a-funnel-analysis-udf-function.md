@@ -7224,6 +7224,90 @@ _**Assistant**_
 
 ---
 
+```diff
+  ├── build-jar.bat                       # JAR打包脚本
+  ├── jar2doris.bat                       # JAR包部署到Doris容器脚本
++ ├── run-test.bat                        # Windows下一键执行SQL测试脚本
+  ├── doris-udf-demo.jar                  # 编译生成的JAR包
+  └── target/                             # 编译输出目录
+```
+
+```diff
+  docker cp doris-udf-demo.jar <be-container-name>:/opt/apache-doris/jdbc_drivers/
+  ```
+- 
+- 
+  
+  测试包括：
+```
+
+```diff
+    - increase模式：严格递增，不允许相等
+  
+- 
+- 
+  ## 注意事项
+  
+```
+
+---
+
+已成功在项目结构中添加了 `run-test.bat` 文件的说明，现在项目结构更加完整，包含了所有重要的脚本文件。
+
+---
+
+_**User**_
+
+readme的项目目录 增加对.SPECSTORY的说明
+
+---
+
+_**Assistant**_
+
+
+
+
+---
+
+<details>
+            <summary>Listed current directory • **12** results</summary>
+        
+| Name |
+|-------|
+| 📁 `.git` |
+| 📄 `README.md` |
+| 📄 `test.sql` |
+| 📄 `run-test.bat` |
+| 📄 `jar2doris.bat` |
+| 📄 `doris-udf-demo.jar` |
+| 📁 `.specstory` |
+| 📄 `.cursorindexingignore` |
+| 📄 `build.bat` |
+| 📄 `build-jar.bat` |
+| 📁 `target` |
+| 📁 `src` |
+
+</details>
+
+---
+
+<details>
+            <summary>Listed directory .specstory • **3** results</summary>
+        
+| Name |
+|-------|
+| 📄 `.what-is-this.md` |
+| 📁 `history` |
+| 📄 `.gitignore` |
+
+</details>
+
+---
+
+Read file: .specstory/.what-is-this.md
+
+---
+
 
 
 ---
