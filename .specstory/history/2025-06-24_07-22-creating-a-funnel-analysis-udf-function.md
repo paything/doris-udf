@@ -6845,236 +6845,48 @@ private List<EventRow> parseEventString(String eventString) {
 
 _**User**_
 
-讨论一个事情，能否让java返回的数据类型是一个array<STRING>
+
 
 ---
 
 _**Assistant**_
 
-你的问题很有代表性，下面详细说明：
+你已经把事件分割逻辑改成了正则表达式的方式，这种写法比原来的“硬编码位置判断”**更简洁、更健壮、更聪明**，完全推荐！
 
----
+### 你的实现优点
+- 用正则 `(?=\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?#)` 匹配每个事件的起点，兼容带毫秒和不带毫秒的时间戳。
+- 不依赖字符位置，不怕标签里有逗号、#、@等特殊字符。
+- 代码可读性和可维护性都大大提升。
 
-## 1. Java UDF返回 `array<STRING>` 的可行性
-
-**Doris Java UDF** 支持返回多种类型，包括 `STRING`、`INT`、`DOUBLE`、`BOOLEAN`，以及**数组类型**（如 `array<STRING>`）。  
-但**前提是**：  
-- 你的UDF方法的返回值类型必须是 `java.util.List<String>` 或 `String[]`。
-- Doris注册UDF时，`RETURNS ARRAY<STRING>`，并且`symbol`方法签名要匹配。
-
----
-
-## 2. 代码层面怎么写
-
-### 方法签名
+### 代码片段回顾
 ```java
-public List<String> evaluate(Integer windowSeconds, Integer stepIntervalSeconds, String mode, String eventString)
-```
-或者
-```java
-public String[] evaluate(Integer windowSeconds, Integer stepIntervalSeconds, String mode, String eventString)
-```
-
-### 返回值
-- 直接返回 `List<String>` 或 `String[]`，每个元素就是你想要的字符串。
-
----
-
-## 3. Doris注册UDF时的写法
-
-```sql
-CREATE FUNCTION window_funnel(INT, INT, STRING, STRING)
-RETURNS ARRAY<STRING>
-PROPERTIES (
-    "file"="file:///opt/apache-doris/jdbc_drivers/doris-udf-demo.jar",
-    "symbol"="org.apache.doris.udf.WindowFunnel",
-    "always_nullable"="true",
-    "type"="JAVA_UDF"
-);
-```
-
----
-
-## 4. 注意事项
-
-- **Doris 1.2.0+** 支持Java UDF返回数组类型（array），老版本不支持。
-- 你返回的List/Array元素类型必须和注册时的类型完全一致。
-- 如果你返回的是多维数组（如 `List<List<String>>`），Doris目前不支持直接映射为 `array<array<string>>`，只能一维。
-
----
-
-## 5. 你的场景建议
-
-- 如果你只想返回每条路径的一个字符串（如JSON），用`String`即可。
-- 如果你想让Doris直接处理每条路径的每个字段（如标签数组），可以返回`array<STRING>`，每个元素是一个标签或一个字段。
-
-**举例：**
-- 返回所有标签：`["tag1", "tag2", "tag3"]`
-- 返回所有路径的JSON字符串：`["{\"ts\":..., \"tags\":[...]}","..."]`
-
----
-
-## 6. 总结
-
-- **可以**让Java UDF返回 `array<STRING>`，只要方法签名和Doris注册时一致。
-- 推荐用 `List<String>` 作为返回类型，Doris会自动映射为 `array<STRING>`。
-- 复杂结构建议转成JSON字符串后再返回。
-
----
-
-如需具体代码示例或注册SQL示例，可以告诉我你的需求格式，我可以帮你写出完整代码！
-
----
-
-_**User**_
-
-            return sb.toString();
-这里是不是也要改
-
----
-
-_**Assistant**_
-
-是的，这里**必须要改**！
-
----
-
-你已经把UDF的返回类型从 `String` 改成了 `List<String>`，而 `return sb.toString();` 依然返回的是字符串，这样会导致类型不匹配，Doris 也无法识别为 `array<STRING>`。
-
----
-
-## 正确做法
-
-你应该把每条路径的结果（比如原来拼成的JSON或数组字符串）作为一个元素，放进 `List<String>` 里，最后直接 `return` 这个列表。
-
-### 示例修改
-
-假设你原来是这样拼接所有路径的字符串：
-
-```java
-StringBuilder sb = new StringBuilder("[");
-for (...) {
-    // sb.append(...)
+Pattern pattern = Pattern.compile("(?=\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?#)");
+Matcher matcher = pattern.matcher(eventString);
+List<Integer> indices = new ArrayList<>();
+while (matcher.find()) {
+    indices.add(matcher.start());
 }
-sb.append("]");
-return sb.toString();
-```
+indices.add(eventString.length()); // 结尾
 
-**应该改成：**
-
-```java
-List<String> result = new ArrayList<>();
-for (FunnelPath path : allPaths) {
-    StringBuilder sb = new StringBuilder();
-    sb.append(path.firstTimestamp);
-    for (Long diff : path.timeDiffs) {
-        sb.append(",").append(diff);
+for (int i = 0; i < indices.size() - 1; i++) {
+    String part = eventString.substring(indices.get(i), indices.get(i + 1));
+    EventRow event = parseSingleEvent(part.replaceAll("^,|,$", "")); // 去除首尾逗号
+    if (event != null) {
+        list.add(event);
     }
-    sb.append(",[");
-    for (int k = 0; k < path.tags.size(); k++) {
-        sb.append("\"").append(path.tags.get(k)).append("\"");
-        if (k < path.tags.size() - 1) sb.append(",");
-    }
-    sb.append("]");
-    result.add(sb.toString());
 }
-return result;
 ```
 
-这样，Doris 就会收到一个 `array<STRING>`，每个元素是一条路径的分析结果。
+### 总结
+- 这种正则分割法是业界常用的“聪明做法”，比手动找位置、找逗号健壮很多。
+- 只要你的事件字符串格式规范（每个事件都以时间戳开头），这种方法就非常可靠。
+- 以后如果时间戳格式有变化，只需调整正则即可。
 
 ---
 
-## 总结
-
-- **必须改**，不能再返回 `sb.toString()`，要返回 `List<String>`。
-- 每个元素可以是你想要的格式（如逗号分隔、JSON等），但建议结构清晰，便于下游SQL处理。
-
-如需完整代码替换片段，可以告诉我！
-
----
-
-_**User**_
-
-修改后的代码有问题吗
-
----
-
-_**Assistant**_
-
-你的修改**基本思路是对的**，即返回 `List<String>`，每个元素是一条路径的分析结果。但有两个需要注意的地方：
-
----
-
-### 1. **返回值类型和空结果处理**
-
-你现在的代码：
-```java
-if (allPaths.isEmpty()) return "[]";
-```
-这里返回了字符串 `"[]"`，但方法签名是 `List<String>`，类型不匹配。  
-**正确做法：**  
-应该返回 `Collections.emptyList()` 或 `new ArrayList<>()`，即空的字符串列表。
-
----
-
-### 2. **每条路径的格式**
-
-你每条路径的格式是：
-```
-1704038400123,1222,1766,["tag1","tag2","tag3"]
-```
-这其实是一个字符串，不是标准的JSON，也不是严格的结构化数据。  
-- 如果你只是想让Doris下游直接用 `array<STRING>`，这样没问题。
-- 如果你希望Doris能直接拆分标签，建议只返回标签数组，或者返回更标准的JSON字符串。
-
----
-
-### 3. **建议的空值返回写法**
-
-```java
-if (allPaths.isEmpty()) return Collections.emptyList();
-```
-
----
-
-### 4. **完整建议代码片段**
-
-```java
-// ...
-// 如果没有找到任何路径
-if (allPaths.isEmpty()) return Collections.emptyList();
-
-// 构建结果数组
-List<String> result = new ArrayList<>();
-for (FunnelPath path : allPaths) {
-    StringBuilder sb = new StringBuilder();
-    sb.append(path.firstTimestamp);
-    for (Long diff : path.timeDiffs) {
-        sb.append(",").append(diff);
-    }
-    sb.append(",[");
-    for (int k = 0; k < path.tags.size(); k++) {
-        sb.append("\"").append(path.tags.get(k)).append("\"");
-        if (k < path.tags.size() - 1) sb.append(",");
-    }
-    sb.append("]");
-    result.add(sb.toString());
-}
-return result;
-```
-
----
-
-### 5. **总结**
-
-- **类型要统一**：不能返回字符串 `"[]"`，要返回空的 `List<String>`。
-- **格式可自定义**：只要Doris端能解析即可。
-- 其它逻辑没问题，能正常返回 `array<STRING>`。
-
----
-
-如需更结构化的返回（如只返回标签数组或标准JSON），可以进一步优化。如果你有下游SQL需求，也可以告诉我，我帮你设计最合适的返回格式！
+**结论：**
+你现在的写法已经是“更简洁聪明的做法”了！  
+如果还有其它想优化的点，欢迎继续提问。
 
 ---
 
@@ -7086,43 +6898,55 @@ _**User**_
 
 _**Assistant**_
 
-你的代码逻辑已经没问题，**UDF本身返回List<String>是对的**，但你遇到的报错：
+你在 PowerShell 里运行 `mysql` 命令时，出现了如下报错：
 
 ```
-错误: 不兼容的类型: List<String>无法转换为String
-String result1 = funnel.evaluate(10, 5, "strict", input1);
+无法将“mysql”项识别为 cmdlet、函数、脚本文件或可运行程序的名称。请检查名称的拼写，如果包括路径，请确保路径正确，然后再试一次。
 ```
 
 **原因分析：**
-- 你把 `evaluate` 的返回值赋给了 `String result1`，但现在 `evaluate` 返回的是 `List<String>`，类型不匹配。
+- 你的系统找不到 `mysql` 命令，说明 MySQL 客户端没有安装，或者没有加入到系统的 PATH 环境变量中。
 
 ---
 
 ## 解决方法
 
-你需要把测试代码的变量类型也改成 `List<String>`，比如：
+### 1. 检查 MySQL 客户端是否已安装
 
-```java
-List<String> result1 = funnel.evaluate(10, 5, "strict", input1);
-System.out.println("输出结果: " + result1);
+- 打开命令行，输入 `mysql --version`
+- 如果提示找不到命令，说明未安装或未配置环境变量。
+
+### 2. 安装 MySQL 客户端
+
+- 可以去官网下载 Windows 版 MySQL Community Server（包含客户端工具）：
+  - https://dev.mysql.com/downloads/mysql/
+- 只需要安装“Client Programs”部分即可，不需要安装完整的数据库服务端。
+
+### 3. 配置环境变量
+
+- 安装后，将 MySQL 的 `bin` 目录（如 `C:\Program Files\MySQL\MySQL Server 8.0\bin`）加入到系统的 PATH 环境变量中。
+- 设置方法：控制面板 → 系统 → 高级系统设置 → 环境变量 → Path → 编辑 → 添加上述路径。
+
+### 4. 重新打开 PowerShell 或 CMD
+
+- 新开一个终端窗口，输入 `mysql --version`，能看到版本号说明配置成功。
+
+### 5. 再次运行你的命令
+
+```sh
+mysql -h 127.0.0.1 -P 9030 -u root < test.sql
 ```
-
-如果你还想像以前那样输出为一行字符串，可以这样：
-
-```java
-System.out.println("输出结果: " + result1); // 直接打印List
-// 或者
-System.out.println("输出结果: " + String.join(" | ", result1)); // 用分隔符拼接
-```
+注意：如果要执行 SQL 文件，应该用 `< test.sql`，而不是直接写 `test.sql`。
 
 ---
 
 ## 总结
 
-- UDF返回类型和测试代码变量类型要一致。
-- 只需把所有 `String resultX = ...` 改成 `List<String> resultX = ...` 即可。
+- 先安装 MySQL 客户端
+- 配置好 PATH 环境变量
+- 用新终端窗口运行命令
 
-如需批量替换测试代码，告诉我，我可以帮你写出替换建议！
+如有其它环境或命令行问题，欢迎继续提问！
 
 ---
 
@@ -7134,7 +6958,256 @@ _**User**_
 
 _**Assistant**_
 
+我看到您在Windows PowerShell中遇到了重定向操作符的问题。在PowerShell中，`<` 重定向操作符不被支持。让我帮您解决这个问题。
 
+
+---
+
+Read file: test.sql
+
+---
+
+我看到您的SQL文件内容。在Windows PowerShell中，您需要使用不同的方式来执行SQL文件。让我为您提供几种解决方案：
+
+
+---
+
+```diff
+- 
++ @echo off
++ echo 正在执行SQL测试文件...
++ mysql -h 127.0.0.1 -P 9030 -u root -e "source test.sql"
++ pause 
+```
+
+---
+
+现在您有几种方式来执行SQL测试：
+
+## 方法1：使用批处理文件（推荐）
+
+
+---
+
+```bash
+.\run-test.bat
+```
+
+```
+PS C:\Users\huangpeixin\doris-udf> .\run-test.bat
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+姝ｅ湪鎵цSQL娴嬭瘯鏂囦欢...
++-------+----------+------------------------------------------------------------
+----+-----------------------
+---------------------------------------+
+                            | uid   | link_col | funnel_result
+                                | e1
+                                       |
++-------+----------+------------------------------------------------------------
+----+-----------------------
+---------------------------------------+
+                            | payne | tiktok#1 | [[1704067200123,1222,1766,["tik
+tok#1","tiktok#1","tiktok#1"]]] | [1704067200123,1222,17
+66,["tiktok#1","tiktok#1","tiktok#1"]] |
+                            | payne | fb@,#2   | [[1706745600012,989,["fb@,#2","
+fb@,#2"]]]                      | [1706745600012,989,["f
+b@,#2","fb@,#2"]]                      |
+                            | cjt   | f@#,b    | [[1704067200012,["f@#,b"]]]
+                                | [1704067200012,["f@#,b
+"]]                                    |
+                            +-------+----------+--------------------------------
+--------------------------------+-----------------------
+---------------------------------------+
+                            ERROR 1105 (HY000) at line 69 in file: 'test.sql': e
+rrCode = 2, detailMessage = The mode params of mysql.win
+dow_funnel function must be string
+                            请按任意键继续. . . 
+
+```
+
+---
+
+很好！SQL测试执行成功了，但是我注意到测试文件中有一些错误。让我修复这些问题：
+
+1. 测试结果显示我们的UDF函数工作正常，返回了正确的漏斗分析结果
+2. 但是在第69行有一个错误，关于`mysql.window_funnel`函数的模式参数问题
+
+让我修复测试文件中的问题：
+
+
+---
+
+```diff
+      'backtrack_mode' as test_type,
+      uid,
+-     mysql.window_funnel(10, 5, 'backtrack', funnel_track) as funnel_result
++     window_funnel_track(10, 5, 'backtrack', funnel_track) as funnel_result
+  FROM (
+      SELECT 
+```
+
+```diff
+      'increase_mode' as test_type,
+      uid,
+-     mysql.window_funnel(10, 5, 'increase', funnel_track) as funnel_result
++     window_funnel_track(10, 5, 'increase', funnel_track) as funnel_result
+  FROM (
+      SELECT 
+```
+
+---
+
+现在让我们重新运行修复后的测试：
+
+
+---
+
+```bash
+.\run-test.bat
+```
+
+```
+姝ｅ湪鎵цSQL娴嬭瘯鏂囦欢...
++-------+----------+----------------------------------------------------------------+-----------------------
+---------------------------------------+
+| uid   | link_col | funnel_result                                                  | e1
+                                       |
++-------+----------+----------------------------------------------------------------+-----------------------
+---------------------------------------+
+| payne | tiktok#1 | [[1704067200123,1222,1766,["tiktok#1","tiktok#1","tiktok#1"]]] | [1704067200123,1222,17
+---------------------------------------+
++----------------+-------+---------------------------------------------------------+
+| test_type      | uid   | funnel_result                                           |
++----------------+-------+---------------------------------------------------------+
+| backtrack_mode | user2 | [[1704067200000,300,-100,["te@st1","te,st3","te#st2"]]] |
++----------------+-------+---------------------------------------------------------+
++---------------+-------+------------------------------+
+| test_type     | uid   | funnel_result                |
++---------------+-------+------------------------------+
+| increase_mode | user3 | [[1704067200000,["te@st1"]]] |
++---------------+-------+------------------------------+
+请按任意键继续. . .
+PS C:\Users\huangpeixin\doris-udf>
+```
+
+---
+
+
+您的SQL测试现在已经可以在Windows下通过批处理文件正常执行，并且所有模式（default、backtrack、increase）都能正确调用自定义的 `window_funnel_track` UDF，返回预期的漏斗分析结果。
+
+主要修正点如下：
+- 用 `-e "source test.sql"` 方式替代 `< test.sql`，解决了PowerShell下的重定向问题。
+- SQL文件中所有 `mysql.window_funnel` 已替换为 `window_funnel_track`，避免了参数不匹配报错。
+
+如果后续还需批量测试或有新SQL文件，只需修改 `test.sql`，然后双击或运行 `run-test.bat` 即可。
+
+如需进一步自动化或有其他SQL执行需求，欢迎继续提问！
+
+---
+
+_**User**_
+
+完善readme，增加run-test.BAT的说明，并且把结果也写进去
+
+---
+
+_**Assistant**_
+
+```diff
+     ```
+  
++ ## 一键测试脚本说明
++ 
++ 项目提供了 `run-test.bat` 批处理脚本，可在Windows下一键执行 Doris SQL 测试。
++ 
++ ### 使用方法
++ 
++ 1. 确保已安装好 MySQL 客户端，并已配置好 Doris 服务（本地或远程）。
++ 2. 双击 `run-test.bat` 或在命令行中执行：
++    ```bash
++    run-test.bat
++    ```
++    或
++    ```bash
++    .\run-test.bat
++    ```
++ 3. 脚本会自动调用 MySQL 客户端，执行 `test.sql` 脚本中的所有测试用例。
++ 
++ > 脚本内容如下：
++ > ```bat
++ > @echo off
++ > echo excuting test.sql ...
++ > mysql -h 127.0.0.1 -P 9030 -u root -e "source test.sql"
++ > pause
++ > ```
++ 
++ ### 运行结果示例
++ 
++ 执行后，终端会输出如下结果（部分内容）：
++ 
++ ```
++ +-------+----------+----------------------------------------------------------------+--------------------------------------------------------------+
++ | uid   | link_col | funnel_result                                                  | e1                                                           |
++ +-------+----------+----------------------------------------------------------------+--------------------------------------------------------------+
++ | payne | tiktok#1 | [[1704067200123,1222,1766,["tiktok#1","tiktok#1","tiktok#1"]]] | [1704067200123,1222,1766,["tiktok#1","tiktok#1","tiktok#1"]] |
++ | payne | fb@,#2   | [[1706745600012,989,["fb@,#2","fb@,#2"]]]                      | [1706745600012,989,["fb@,#2","fb@,#2"]]                      |
++ | cjt   | f@#,b    | [[1704067200012,["f@#,b"]]]                                    | [1704067200012,["f@#,b"]]                                    |
++ +-------+----------+----------------------------------------------------------------+--------------------------------------------------------------+
++ +----------------+-------+---------------------------------------------------------+
++ | test_type      | uid   | funnel_result                                           |
++ +----------------+-------+---------------------------------------------------------+
++ | backtrack_mode | user2 | [[1704067200000,300,-100,["te@st1","te,st3","te#st2"]]] |
++ +----------------+-------+---------------------------------------------------------+
++ +---------------+-------+------------------------------+
++ | test_type     | uid   | funnel_result                |
++ +---------------+-------+------------------------------+
++ | increase_mode | user3 | [[1704067200000,["te@st1"]]] |
++ +---------------+-------+------------------------------+
++ ```
++ 
++ 如需自定义测试内容，可直接编辑 `test.sql` 文件。
++ 
+  ## 详细使用说明
+  
+```
+
+---
+
+README 已经补充了 `run-test.bat` 的详细说明，包括：
+
+- 脚本用途和使用方法（双击或命令行运行）
+- 脚本内容展示
+- 实际运行后的 Doris SQL 输出结果示例（与您的真实结果一致）
+- 提示可自定义 `test.sql` 进行扩展测试
+
+这样新用户可以一键验证环境和UDF效果，也能直观看到预期输出。如需进一步完善或有其他文档需求，欢迎随时告知！
 
 ---
 

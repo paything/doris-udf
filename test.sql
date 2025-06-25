@@ -1,8 +1,8 @@
 -- 如果换了jar包，先删除再创建
 DROP GLOBAL FUNCTION window_funnel_track(INT, INT, STRING, STRING) ;
 
--- 进入mysql，在mysql里面创建函数
-USE mysql;
+-- 进入mysql，在mysql里面创建函数，如果用了GLOBAL就不需要进入mysql
+-- USE mysql;
 
 -- 创建udf
 CREATE GLOBAL FUNCTION window_funnel_track(INT, INT, STRING, STRING) RETURNS STRING PROPERTIES (
@@ -76,7 +76,7 @@ select '2024-01-01 00:00:00.300' as dt,'user2' as uid,'iap' as event,'te,st3' as
 SELECT 
     'backtrack_mode' as test_type,
     uid,
-    mysql.window_funnel(10, 5, 'backtrack', funnel_track) as funnel_result
+    window_funnel_track(10, 5, 'backtrack', funnel_track) as funnel_result
 FROM (
     SELECT 
         uid,
@@ -106,7 +106,7 @@ select '2024-01-01 00:00:00.100' as dt,'user3' as uid,'chat' as event,'te,st3' a
 SELECT 
     'increase_mode' as test_type,
     uid,
-    mysql.window_funnel(10, 5, 'increase', funnel_track) as funnel_result
+    window_funnel_track(10, 5, 'increase', funnel_track) as funnel_result
 FROM (
     SELECT 
         uid,
