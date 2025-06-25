@@ -190,7 +190,7 @@ excuting test.sql ...
 | payne | tiktok#1 | [[1704067200123,1222,1766,["tiktok#1","tiktok#1","tiktok#1"]]]     | [1704067200123,1222,1766,["tiktok#1","tiktok#1","tiktok#1"]] |     
 | payne | fb@,#2   | [[1706745600012,989,["fb@,#2","fb@,#2"]]]                          | [1706745600012,989,["fb@,#2","fb@,#2"]]                      |     
 | cjt   | f@#,b    | [[1704067200012,["f@#,b"]],[1704153600012,3000,["f@#,b","f@#,b"]]] | [1704067200012,["f@#,b"]]                                    |     
-| cjt   | f@#,b    | [[1704067200012,["f@#,b"]],[1704153600012,3000,["f@#,b","f@#,b"]]] | [1704153600012,3000,["f@#,b","f@#,b"]]                       |
+| cjt   | f@#,b    | [[1704067200012,["f@#,b"]],[1704153600012,3000,["f@#,b","f@#,b"]]] | [1704153600012,3000,["f@#,b","f@#,b"]]                       |     
 +-------+----------+--------------------------------------------------------------------+--------------------------------------------------------------+     
 +----------------+-------+---------------------------------------------------------+
 | test_type      | uid   | funnel_result                                           |
@@ -202,21 +202,21 @@ excuting test.sql ...
 +---------------+-------+------------------------------+
 | increase_mode | user3 | [[1704067200000,["te@st1"]]] |
 +---------------+-------+------------------------------+
-+----------+------+-------+------------+------+------+------+------+------+------+-----------+-----------+
-| group0   | rank | value | path_count | avg  | p0   | p25  | p50  | p75  | p100 | Q3+1_5IQR | Q1-1_5IQR |
-+----------+------+-------+------------+------+------+------+------+------+------+-----------+-----------+
-| Total    |    1 |     2 |          3 | NULL | NULL | NULL | NULL | NULL | NULL |      NULL |      NULL |
-| Total    |    2 |     2 |          3 |  1.7 |    0 |    0 |    1 |    2 |    2 |      4.25 |     -1.75 |
-| Total    |    3 |     1 |          1 |  1.8 |    1 |    1 |    1 |    1 |    1 |         1 |         1 |
-| f@#,b    |    1 |     1 |          1 | NULL | NULL | NULL | NULL | NULL | NULL |      NULL |      NULL |
-| f@#,b    |    2 |     1 |          1 |    3 |    3 |    3 |    3 |    3 |    3 |         3 |         3 |
-| fb@,#2   |    1 |     1 |          1 | NULL | NULL | NULL | NULL | NULL | NULL |      NULL |      NULL |
-| fb@,#2   |    2 |     1 |          1 |    1 |    0 |    0 |    0 |    0 |    0 |         0 |         0 |
-| tiktok#1 |    1 |     1 |          1 | NULL | NULL | NULL | NULL | NULL | NULL |      NULL |      NULL |
-| tiktok#1 |    2 |     1 |          1 |  1.2 |    1 |    1 |    1 |    1 |    1 |         1 |         1 |
-| tiktok#1 |    3 |     1 |          1 |  1.8 |    1 |    1 |    1 |    1 |    1 |         1 |         1 |
-+----------+------+-------+------------+------+------+------+------+------+------+-----------+-----------+
-请按任意键继续. . . 
++----------+--------------+-------+------------+------+------+------+------+------+------+-----------+-----------+
+| group0   | funnel_level | value | path_count | avg  | p0   | p25  | p50  | p75  | p100 | Q3+1_5IQR | Q1-1_5IQR |
++----------+--------------+-------+------------+------+------+------+------+------+------+-----------+-----------+
+| Total    |            1 |     2 |          3 |  1.7 |    0 |    0 |    1 |    2 |    2 |      4.25 |     -1.75 |
+| Total    |            2 |     2 |          3 |  1.8 |    1 |    1 |    1 |    1 |    1 |         1 |         1 |
+| Total    |            3 |     1 |          1 | NULL | NULL | NULL | NULL | NULL | NULL |      NULL |      NULL |
+| f@#,b    |            1 |     1 |          1 |    3 |    3 |    3 |    3 |    3 |    3 |         3 |         3 |
+| f@#,b    |            2 |     1 |          1 | NULL | NULL | NULL | NULL | NULL | NULL |      NULL |      NULL |
+| fb@,#2   |            1 |     1 |          1 |    1 |    0 |    0 |    0 |    0 |    0 |         0 |         0 |
+| fb@,#2   |            2 |     1 |          1 | NULL | NULL | NULL | NULL | NULL | NULL |      NULL |      NULL |
+| tiktok#1 |            1 |     1 |          1 |  1.2 |    1 |    1 |    1 |    1 |    1 |         1 |         1 |
+| tiktok#1 |            2 |     1 |          1 |  1.8 |    1 |    1 |    1 |    1 |    1 |         1 |         1 |
+| tiktok#1 |            3 |     1 |          1 | NULL | NULL | NULL | NULL | NULL | NULL |      NULL |      NULL |
++----------+--------------+-------+------------+------+------+------+------+------+------+-----------+-----------+
+请按任意键继续. . .
 ```
 
 如需自定义测试内容，可直接编辑 `test.sql` 文件。
@@ -457,14 +457,14 @@ and step_count=funnel_track_max_step
 -- select 
 -- uid
 -- ,group0
--- ,array_popback(cast(funnel_path as ARRAY<int>)) as funnel_track 
+-- ,array_popfront(cast(funnel_path as ARRAY<bigint>)) as funnel_track 
 -- from track_explode
 
 --模式2，只保留第一条路径，按时间排序后最早的第一条
 -- select 
 -- uid
 -- ,group0
--- ,array_popback(cast(funnel_path as ARRAY<int>)) as funnel_track 
+-- ,array_popfront(cast(funnel_path as ARRAY<bigint>)) as funnel_track 
 -- from track_explode
 -- where path_rank=1
 
@@ -472,16 +472,18 @@ and step_count=funnel_track_max_step
 select 
 uid
 ,group0
-,array_popback(cast(max_by(funnel_path,duration_sum_second) as ARRAY<int>)) as funnel_track 
--- ,array_popback(cast(min_by(funnel_path,duration_sum_second) as ARRAY<int>)) as funnel_track 
+,array_popfront(cast(max_by(funnel_path,duration_sum_second) as ARRAY<bigint>)) as funnel_track 
+-- ,array_popfront(cast(min_by(funnel_path,duration_sum_second) as ARRAY<bigint>)) as funnel_track 
 from track_explode
 group by uid,group0
 )
 
+-- select * from path_filter_mode
+
 
 select
   ifnull (group0, 'Total') as group0,
-  funnel_level as rank,
+  funnel_level,
   count(distinct uid) as value,
   count(1) as path_count,
   round(avg(duration), 1) as `avg`,
