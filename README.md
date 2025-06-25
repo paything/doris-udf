@@ -1,7 +1,8 @@
 # Doris UDF - WindowFunnel 漏斗分析函数
 
 这是一个用于Apache Doris的Java UDF函数，专门用于执行漏斗分析。该函数可以分析用户行为序列，识别符合特定步骤顺序的路径，并返回时间戳、时间差和标签信息。
-该项目由Ai创建，SHOW YOU MY TALK: .specstory/history
+该项目Java代码部分由Ai创建，SHOW YOU MY TALK: .specstory/history
+SQL部分目前还是手动写
 
 ## 功能特性
 
