@@ -1,4 +1,4 @@
-package org.apache.doris.udf;
+ package org.apache.doris.udf;
 
 public class WindowFunnelTest {
     public static void main(String[] args) {
@@ -97,5 +97,16 @@ public class WindowFunnelTest {
         System.out.println("分析模式: backtrack_long");
         String result10 = funnel.evaluate(60, 20, "backtrack_long", input10);
         System.out.println("输出结果: " + result10);
+        System.out.println();
+
+        System.out.println("=== 测试11：标签包含特殊字符（#@,） ===");
+        String input11 = "2024-01-01 00:00:00.000#1@0@0#tag#with#hash,2024-01-01 00:00:01.000#0@1@0#tag@with@at,2024-01-01 00:00:02.000#0@0@1#tag,with,comma";
+        System.out.println("输入数据: " + input11);
+        System.out.println("窗口时长: 10秒");
+        System.out.println("步骤间隔: 5秒");
+        System.out.println("分析模式: default");
+        String result11 = funnel.evaluate(10, 5, "default", input11);
+        System.out.println("输出结果: " + result11);
+        System.out.println();
     }
-} 
+}

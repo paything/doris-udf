@@ -241,21 +241,79 @@ public class WindowFunnel extends UDF {
     // 解析事件字符串
     private List<EventRow> parseEventString(String eventString) {
         List<EventRow> list = new ArrayList<>();
-        String[] parts = eventString.split(",");
-        for (String part : parts) {
-            String[] fields = part.split("#");
-            if (fields.length >= 3) {
-                long ts = parseTimestamp(fields[0]);
-                String[] stepStrs = fields[1].split("@");
-                int[] steps = new int[stepStrs.length];
-                for (int i = 0; i < stepStrs.length; i++) {
-                    steps[i] = "1".equals(stepStrs[i]) ? 1 : 0;
-                }
-                String group = fields[2]; // 提取标签
-                list.add(new EventRow(ts, steps, group));
+        
+        // 使用更智能的分割方法，处理标签中包含逗号的情况
+        int startIndex = 0;
+        while (startIndex < eventString.length()) {
+            // 找到第一个#的位置（时间戳结束）
+            int firstHashIndex = eventString.indexOf('#', startIndex);
+            if (firstHashIndex == -1) break;
+            
+            // 找到第二个#的位置（步骤标志结束）
+            int secondHashIndex = eventString.indexOf('#', firstHashIndex + 1);
+            if (secondHashIndex == -1) break;
+            
+            // 找到下一个事件的开始位置（下一个时间戳的开始）
+            int nextEventStart = findNextEventStart(eventString, secondHashIndex + 1);
+            
+            // 提取当前事件
+            String part = eventString.substring(startIndex, nextEventStart);
+            
+            // 解析事件
+            EventRow event = parseSingleEvent(part);
+            if (event != null) {
+                list.add(event);
+            }
+            
+            // 移动到下一个事件
+            startIndex = nextEventStart;
+        }
+        
+        return list;
+    }
+    
+    // 找到下一个事件的开始位置
+    private int findNextEventStart(String eventString, int startIndex) {
+        // 查找下一个时间戳模式：YYYY-MM-DD HH:mm:ss
+        for (int i = startIndex; i < eventString.length() - 18; i++) {
+            if (eventString.charAt(i) == '2' && 
+                eventString.charAt(i + 4) == '-' && 
+                eventString.charAt(i + 7) == '-' && 
+                eventString.charAt(i + 10) == ' ' && 
+                eventString.charAt(i + 13) == ':' && 
+                eventString.charAt(i + 16) == ':') {
+                return i;
             }
         }
-        return list;
+        return eventString.length();
+    }
+    
+    // 解析单个事件
+    private EventRow parseSingleEvent(String part) {
+        // 找到第一个#的位置（时间戳结束）
+        int firstHashIndex = part.indexOf('#');
+        if (firstHashIndex == -1) return null;
+        
+        // 找到第二个#的位置（步骤标志结束）
+        int secondHashIndex = part.indexOf('#', firstHashIndex + 1);
+        if (secondHashIndex == -1) return null;
+        
+        // 提取各个部分
+        String timestamp = part.substring(0, firstHashIndex);
+        String stepStr = part.substring(firstHashIndex + 1, secondHashIndex);
+        String group = part.substring(secondHashIndex + 1); // 标签是剩余的所有内容
+        
+        // 解析时间戳
+        long ts = parseTimestamp(timestamp);
+        
+        // 解析步骤标志
+        String[] stepStrs = stepStr.split("@");
+        int[] steps = new int[stepStrs.length];
+        for (int i = 0; i < stepStrs.length; i++) {
+            steps[i] = "1".equals(stepStrs[i]) ? 1 : 0;
+        }
+        
+        return new EventRow(ts, steps, group);
     }
 
     // 解析时间戳 - 支持多种格式
