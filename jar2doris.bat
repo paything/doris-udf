@@ -57,7 +57,7 @@ echo ========================================
 echo.
 echo Next, execute the following SQL in Doris to register the UDF:
 echo.
-echo CREATE FUNCTION window_funnel(INT, INT, STRING, STRING) RETURNS STRING PROPERTIES (
+echo CREATE GLOBAL FUNCTION window_funnel_track(INT, INT, STRING, STRING) RETURNS STRING PROPERTIES (
 echo   "file"="file:///opt/apache-doris/jdbc_drivers/doris-udf-demo.jar",
 echo   "symbol"="org.apache.doris.udf.WindowFunnel",
 echo   "always_nullable"="true",
