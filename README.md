@@ -27,6 +27,7 @@ doris-udf/
 ├── build.bat                           # 编译脚本
 ├── build-jar.bat                       # JAR打包脚本
 ├── jar2doris.bat                       # JAR包部署到Doris容器脚本
+├── run-test.bat                        # Windows下一键执行SQL测试脚本
 ├── doris-udf-demo.jar                  # 编译生成的JAR包
 └── target/                             # 编译输出目录
 ```
@@ -327,8 +328,6 @@ docker cp doris-udf-demo.jar <fe-container-name>:/opt/apache-doris/jdbc_drivers/
 docker cp doris-udf-demo.jar <be-container-name>:/opt/apache-doris/jdbc_drivers/
 ```
 
-
-
 测试包括：
 - 3步骤多路径测试
 - 20步骤单路径测试
@@ -340,8 +339,6 @@ docker cp doris-udf-demo.jar <be-container-name>:/opt/apache-doris/jdbc_drivers/
   - backtrack模式：允许倒序，5分钟回溯
   - backtrack_long模式：允许倒序，30分钟回溯
   - increase模式：严格递增，不允许相等
-
-
 
 ## 注意事项
 

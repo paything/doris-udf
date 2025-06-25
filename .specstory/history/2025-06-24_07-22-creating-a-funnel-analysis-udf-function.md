@@ -7211,3 +7211,24 @@ README 已经补充了 `run-test.bat` 的详细说明，包括：
 
 ---
 
+_**User**_
+
+readme项目结构增加run-test目录
+
+---
+
+_**Assistant**_
+
+
+
+
+---
+
+
+
+---
+
+
+
+---
+
