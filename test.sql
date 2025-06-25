@@ -18,13 +18,13 @@ CREATE GLOBAL FUNCTION window_funnel_track(INT, INT, STRING, STRING) RETURNS STR
 with event_log as (
 select '2024-01-01 00:00:00.123' as dt,'payne' as uid,'reg' as event,'tiktok#1' as group0
 union all
-select '2024-01-01 00:00:01.345' as dt,'payne' as uid,'iap' as event,'tiktok,2' as group0
+select '2024-01-01 00:00:01.345' as dt,'payne' as uid,'iap' as event,'tiktok#1' as group0
 union all
-select '2024-01-01 00:00:03.111' as dt,'payne' as uid,'chat' as event,'tiktok@3' as group0
+select '2024-01-01 00:00:03.111' as dt,'payne' as uid,'chat' as event,'tiktok#1' as group0
 union all
-select '2024-02-01 00:00:00.012' as dt,'payne' as uid,'reg' as event,'fb@2' as group0
+select '2024-02-01 00:00:00.012' as dt,'payne' as uid,'reg' as event,'fb@,#2' as group0
 union all
-select '2024-02-01 00:00:01.001' as dt,'payne' as uid,'iap' as event,'f,b' as group0
+select '2024-02-01 00:00:01.001' as dt,'payne' as uid,'iap' as event,'fb@,#2' as group0
 union all
 select '2024-02-01 00:00:02.434' as dt,'payne' as uid,'chat' as event,'fb' as group0
 union all
@@ -35,28 +35,31 @@ union all
 select '2024-01-01 00:00:02.434' as dt,'cjt' as uid,'chat' as event,'fb' as group0
 )
 , track_udf as (
-SELECT 
-    uid,
-    window_funnel_track(10, 1, 'default', funnel_track) as funnel_result
-FROM (
     SELECT 
         uid,
-        group_concat(event_string) as funnel_track
+        group0 as link_col, --关联属性列，不需要就去掉
+        window_funnel_track(
+            10, 
+            5, 
+            'default', 
+            group_concat(_event_string)
+        ) as funnel_result
     FROM (
         select 
-            uid,
+            *,
             concat(dt,'#'
             ,event='reg'
             ,'@',event='iap'
             ,'@',event='chat'
             ,'#',group0
-            ) as event_string
+            ) as _event_string
         from event_log
-        ) t1
-    GROUP BY uid
-    ) t2
+    ) t1
+    GROUP BY 
+    uid
+    ,link_col  --关联属性列，不需要就去掉
 )
-select uid,e1 
+select * 
     from 
     track_udf
     lateral view EXPLODE(cast(funnel_result as ARRAY<varchar>)) tmp as e1
