@@ -48,7 +48,7 @@ jar2doris.bat     # 将JAR包复制到Doris的FE和BE容器中
 ### 3. 在Doris中注册UDF
 
 ```sql
-CREATE FUNCTION window_funnel(INT, INT, STRING, STRING) 
+CREATE GLOBAL FUNCTION window_funnel_track(INT, INT, STRING, STRING) 
 RETURNS STRING 
 PROPERTIES (
     "file"="file:///opt/apache-doris/jdbc_drivers/doris-udf-demo.jar",
@@ -119,10 +119,10 @@ select *
 1. **UDF删除和创建**：
    ```sql
    -- 如果换了jar包，先删除再创建
-   DROP FUNCTION window_funnel(INT, INT, STRING, STRING) 
+   DROP GLOBAL FUNCTION window_funnel_track(INT, INT, STRING, STRING) 
    
    -- 创建udf
-   CREATE FUNCTION window_funnel(INT, INT, STRING, STRING) RETURNS STRING PROPERTIES (
+   CREATE GLOBAL FUNCTION window_funnel_track(INT, INT, STRING, STRING) RETURNS STRING PROPERTIES (
      "file"="file:///opt/apache-doris/jdbc_drivers/doris-udf-demo.jar",
      "symbol"="org.apache.doris.udf.WindowFunnel",
      "always_nullable"="true",
