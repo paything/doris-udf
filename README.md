@@ -89,18 +89,18 @@ FROM (
         uid,
         group_concat(event_string) as funnel_track
     FROM (
-    select 
-        uid,
-        concat(dt,'#'
-        ,event='reg'
-        ,'@',event='iap'
-        ,'@',event='chat'
-        ,'#',group0
-        ) as event_string
-    from event_log
-) t1
+        select 
+            uid,
+            concat(dt,'#'
+            ,event='reg'
+            ,'@',event='iap'
+            ,'@',event='chat'
+            ,'#',group0
+            ) as event_string
+        from event_log
+        ) t1
     GROUP BY uid
-) t2
+    ) t2
 )
 select uid,e1 
     from 
