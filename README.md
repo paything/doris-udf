@@ -2,7 +2,8 @@
 
 这是一个用于Apache Doris的Java UDF函数，专门用于执行漏斗分析。该函数可以分析用户行为序列，识别符合特定步骤顺序的路径，并返回时间戳、时间差和标签信息。
 该项目Java代码部分由Ai创建，SHOW YOU MY TALK: .specstory/history
-SQL部分目前还是手动写
+https://share.specstory.com/stories/d8ac3a10-5ea3-4a1c-bd59-5880d2f1cdff?device=b139564e260951b3d9acb08b982dc0b30c1c5b38f07a43b7cf186cc95704a038
+SQL部分还是手动写
 
 ## 功能特性
 
