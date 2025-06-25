@@ -320,23 +320,7 @@ docker cp doris-udf-demo.jar <fe-container-name>:/opt/apache-doris/jdbc_drivers/
 docker cp doris-udf-demo.jar <be-container-name>:/opt/apache-doris/jdbc_drivers/
 ```
 
-## 构建JAR包
 
-```bash
-build.bat         # 编译Java代码并生成JAR包
-```
-
-生成的JAR包位于：`doris-udf-demo.jar`
-
-## 测试
-
-### Java单元测试
-
-运行测试验证功能：
-
-```bash
-build.bat
-```
 
 测试包括：
 - 3步骤多路径测试
@@ -350,16 +334,7 @@ build.bat
   - backtrack_long模式：允许倒序，30分钟回溯
   - increase模式：严格递增，不允许相等
 
-### Doris集成测试
 
-使用提供的测试SQL脚本：
-
-
-
-```bash
-# 执行test.sql进行完整测试
-mysql -h <doris-host> -P <port> -u <username> -p <password> < test.sql
-```
 
 ## 注意事项
 
