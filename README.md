@@ -62,21 +62,28 @@ PROPERTIES (
 
 ```sql
 with event_log as (
-select '2024-01-01 00:00:00.123' as dt,'payne' as uid,'reg' as event,'tiktok' as group0
+select '2024-01-01 00:00:00.123' as dt,'payne' as uid,'reg' as event,'tiktok#1' as group0
 union all
-select '2024-01-01 00:00:01.345' as dt,'payne' as uid,'iap' as event,'tiktok' as group0
+select '2024-01-01 00:00:01.345' as dt,'payne' as uid,'iap' as event,'tiktok,2' as group0
 union all
-select '2024-01-01 00:00:03.111' as dt,'payne' as uid,'chat' as event,'tiktok' as group0
+select '2024-01-01 00:00:03.111' as dt,'payne' as uid,'chat' as event,'tiktok@3' as group0
 union all
-select '2024-01-01 00:00:00.012' as dt,'cjt' as uid,'reg' as event,'fb' as group0
+select '2024-02-01 00:00:00.012' as dt,'payne' as uid,'reg' as event,'fb@2' as group0
 union all
-select '2024-01-01 00:00:01.001' as dt,'cjt' as uid,'iap' as event,'fb' as group0
+select '2024-02-01 00:00:01.001' as dt,'payne' as uid,'iap' as event,'f,b' as group0
+union all
+select '2024-02-01 00:00:02.434' as dt,'payne' as uid,'chat' as event,'fb' as group0
+union all
+select '2024-01-01 00:00:00.012' as dt,'cjt' as uid,'reg' as event,'f@#,b' as group0
+union all
+select '2024-01-01 00:00:01.001' as dt,'cjt' as uid,'iap' as event,'f@#,@#,b' as group0
 union all
 select '2024-01-01 00:00:02.434' as dt,'cjt' as uid,'chat' as event,'fb' as group0
 )
+, track_udf as (
 SELECT 
     uid,
-    window_funnel(10, 1, 'default', funnel_track) as funnel_result
+    window_funnel_track(10, 1, 'default', funnel_track) as funnel_result
 FROM (
     SELECT 
         uid,
@@ -93,7 +100,13 @@ FROM (
     from event_log
 ) t1
     GROUP BY uid
-) t;
+) t2
+)
+select uid,e1 
+    from 
+    track_udf
+    lateral view EXPLODE(cast(funnel_result as ARRAY<varchar>)) tmp as e1
+;
 ```
 
 ## 测试SQL脚本
