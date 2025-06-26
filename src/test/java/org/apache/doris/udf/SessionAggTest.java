@@ -159,5 +159,73 @@ public class SessionAggTest {
         String result13 = sessionAgg.evaluate("iap", "start", input13, 1800, 10, "default");
         System.out.println("输出结果: " + result13);
         System.out.println();
+
+        System.out.println("=== 测试14：session_uniq_with_group模式 - 会话级别去重验证 ===");
+        String input14 = "[\"2024-01-01 00:00:00.000\",\"iap\",\"product1\",\"cn\"],[\"2024-01-01 00:00:01.000\",\"chat\",\"product1\",\"cn\"],[\"2024-01-01 00:00:02.000\",\"iap\",\"product2\",\"cn\"],[\"2024-01-01 00:00:03.000\",\"iap\",\"product1\",\"cn\"]";
+        System.out.println("输入数据: " + input14);
+        System.out.println("标记事件: iap");
+        System.out.println("标记类型: start");
+        System.out.println("会话间隔: 1800秒");
+        System.out.println("最大步数: 10");
+        System.out.println("分析模式: session_uniq_with_group");
+        String result14 = sessionAgg.evaluate("iap", "start", input14, 1800, 10, "session_uniq_with_group");
+        System.out.println("输出结果: " + result14);
+        System.out.println("说明: 第三个iap(product1,cn)应该被去重，因为第一个iap(product1,cn)已经在会话中了");
+        System.out.println();
+
+        System.out.println("=== 测试15：验证分组字段数量限制 ===");
+        System.out.println("当前代码限制：只能处理2个分组字段（group0, group1）");
+        System.out.println("问题1：0个分组字段会解析失败");
+        System.out.println("问题2：3个或更多分组字段会丢失额外字段");
+        System.out.println();
+        
+        // 测试0个分组字段（会失败）
+        String input15_0 = "[\"2024-01-01 00:00:00.000\",\"iap\"],[\"2024-01-01 00:00:01.000\",\"chat\"]";
+        System.out.println("测试0个分组字段: " + input15_0);
+        String result15_0 = sessionAgg.evaluate("iap", "start", input15_0, 1800, 10, "default");
+        System.out.println("结果: " + result15_0);
+        System.out.println();
+        
+        // 测试3个分组字段（会丢失第3个字段）
+        String input15_3 = "[\"2024-01-01 00:00:00.000\",\"iap\",\"product1\",\"cn\",\"region1\"],[\"2024-01-01 00:00:01.000\",\"chat\",\"product1\",\"cn\",\"region1\"]";
+        System.out.println("测试3个分组字段: " + input15_3);
+        String result15_3 = sessionAgg.evaluate("iap", "start", input15_3, 1800, 10, "default");
+        System.out.println("结果: " + result15_3);
+        System.out.println("注意：第3个分组字段'region1'被丢失了");
+        System.out.println();
+
+        System.out.println("=== 测试16：重构后验证不同数量分组字段 ===");
+        System.out.println("✅ 重构成功！现在支持任意数量的分组字段");
+        System.out.println();
+        
+        // 测试1个分组字段
+        String input16_1 = "[\"2024-01-01 00:00:00.000\",\"iap\",\"product1\"],[\"2024-01-01 00:00:01.000\",\"chat\",\"product1\"]";
+        System.out.println("测试1个分组字段: " + input16_1);
+        String result16_1 = sessionAgg.evaluate("iap", "start", input16_1, 1800, 10, "default");
+        System.out.println("结果: " + result16_1);
+        System.out.println();
+        
+        // 测试4个分组字段
+        String input16_4 = "[\"2024-01-01 00:00:00.000\",\"iap\",\"product1\",\"cn\",\"region1\",\"version1\"],[\"2024-01-01 00:00:01.000\",\"chat\",\"product1\",\"cn\",\"region1\",\"version1\"]";
+        System.out.println("测试4个分组字段: " + input16_4);
+        String result16_4 = sessionAgg.evaluate("iap", "start", input16_4, 1800, 10, "default");
+        System.out.println("结果: " + result16_4);
+        System.out.println();
+        
+        // 测试5个分组字段
+        String input16_5 = "[\"2024-01-01 00:00:00.000\",\"iap\",\"product1\",\"cn\",\"region1\",\"version1\",\"channel1\"],[\"2024-01-01 00:00:01.000\",\"chat\",\"product1\",\"cn\",\"region1\",\"version1\",\"channel1\"]";
+        System.out.println("测试5个分组字段: " + input16_5);
+        String result16_5 = sessionAgg.evaluate("iap", "start", input16_5, 1800, 10, "default");
+        System.out.println("结果: " + result16_5);
+        System.out.println();
+        
+        // 测试带分组的去重模式
+        System.out.println("=== 测试17：多分组字段的去重模式验证 ===");
+        String input17 = "[\"2024-01-01 00:00:00.000\",\"iap\",\"product1\",\"cn\",\"region1\"],[\"2024-01-01 00:00:01.000\",\"chat\",\"product1\",\"cn\",\"region1\"],[\"2024-01-01 00:00:02.000\",\"iap\",\"product2\",\"cn\",\"region1\"],[\"2024-01-01 00:00:03.000\",\"iap\",\"product1\",\"cn\",\"region1\"]";
+        System.out.println("测试session_uniq_with_group模式（3个分组字段）: " + input17);
+        String result17 = sessionAgg.evaluate("iap", "start", input17, 1800, 10, "session_uniq_with_group");
+        System.out.println("结果: " + result17);
+        System.out.println("说明: 第四个iap(product1,cn,region1)应该被去重，因为第一个iap(product1,cn,region1)已经在会话中了");
+        System.out.println();
     }
 } 

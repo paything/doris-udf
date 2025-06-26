@@ -168,15 +168,13 @@ public class SessionAgg extends UDF {
             case MODE_CONS_UNIQ_WITH_GROUP:
                 // 连续事件去重（带分组）
                 return !(event.eventName.equals(lastEvent.eventName) && 
-                        event.group0.equals(lastEvent.group0) && 
-                        event.group1.equals(lastEvent.group1));
+                        event.groups.equals(lastEvent.groups));
                 
             case MODE_SESSION_UNIQ_WITH_GROUP:
                 // 事件严格去重（带分组）
                 for (EventData existingEvent : session.events) {
                     if (event.eventName.equals(existingEvent.eventName) && 
-                        event.group0.equals(existingEvent.group0) && 
-                        event.group1.equals(existingEvent.group1)) {
+                        event.groups.equals(existingEvent.groups)) {
                         return false;
                     }
                 }
@@ -205,9 +203,13 @@ public class SessionAgg extends UDF {
                 
                 sb.append("[");
                 sb.append(j + 1).append(","); // 步骤序号
-                sb.append("\"").append(event.eventName).append("\",");
-                sb.append("\"").append(event.group0).append("\",");
-                sb.append("\"").append(event.group1).append("\"");
+                sb.append("\"").append(event.eventName).append("\"");
+                
+                // 动态输出所有分组字段
+                for (String group : event.groups) {
+                    sb.append(",\"").append(group).append("\"");
+                }
+                
                 sb.append("]");
                 
                 if (j < session.events.size() - 1) {
@@ -231,19 +233,34 @@ public class SessionAgg extends UDF {
     private List<EventData> parseEventString(String eventString) {
         List<EventData> events = new ArrayList<>();
         
-        // 匹配每个事件数组，允许空字符串
-        Pattern pattern = Pattern.compile("\\[\"([^\"]*)\",\"([^\"]*)\",\"([^\"]*)\",\"([^\"]*)\"\\]");
+        // 匹配每个事件数组，支持任意数量的分组字段
+        // 格式：["时间戳","事件名","分组1","分组2",...]
+        Pattern pattern = Pattern.compile("\\[\"([^\"]*)\",\"([^\"]*)\"(,\"[^\"]*\")*\\]");
         Matcher matcher = pattern.matcher(eventString);
         
         while (matcher.find()) {
+            String fullMatch = matcher.group(0);
+            // 提取时间戳和事件名
             String timestamp = matcher.group(1);
             String eventName = matcher.group(2);
-            String group0 = matcher.group(3);
-            String group1 = matcher.group(4);
+            
+            // 提取所有分组字段
+            List<String> groups = new ArrayList<>();
+            Pattern groupPattern = Pattern.compile("\"([^\"]*)\"");
+            Matcher groupMatcher = groupPattern.matcher(fullMatch);
+            
+            // 跳过前两个字段（时间戳和事件名）
+            groupMatcher.find(); // 时间戳
+            groupMatcher.find(); // 事件名
+            
+            // 提取剩余的分组字段
+            while (groupMatcher.find()) {
+                groups.add(groupMatcher.group(1));
+            }
             
             long ts = parseTimestamp(timestamp);
             if (ts > 0) {
-                events.add(new EventData(ts, eventName, group0, group1));
+                events.add(new EventData(ts, eventName, groups));
             }
         }
         
@@ -273,14 +290,12 @@ public class SessionAgg extends UDF {
     private static class EventData {
         long timestamp;
         String eventName;
-        String group0;
-        String group1;
+        List<String> groups; // 动态分组字段列表
         
-        EventData(long timestamp, String eventName, String group0, String group1) {
+        EventData(long timestamp, String eventName, List<String> groups) {
             this.timestamp = timestamp;
             this.eventName = eventName;
-            this.group0 = group0;
-            this.group1 = group1;
+            this.groups = groups;
         }
     }
     
