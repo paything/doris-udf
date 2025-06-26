@@ -1,13 +1,22 @@
 -- 如果换了jar包，先删除再创建
-DROP GLOBAL FUNCTION window_funnel_track(INT, INT, STRING, STRING) ;
+DROP GLOBAL FUNCTION IF EXISTS window_funnel_track(INT, INT, STRING, STRING) ;
+DROP GLOBAL FUNCTION IF EXISTS session_agg(STRING, STRING, STRING, INT, INT, STRING) ;
 
 -- 进入mysql，在mysql里面创建函数，如果用了GLOBAL就不需要进入mysql
 -- USE mysql;
 
--- 创建udf
+-- 创建window_funnel_track UDF
 CREATE GLOBAL FUNCTION window_funnel_track(INT, INT, STRING, STRING) RETURNS STRING PROPERTIES (
   "file"="file:///opt/apache-doris/jdbc_drivers/doris-udf-demo.jar",
   "symbol"="org.apache.doris.udf.WindowFunnel",
+  "always_nullable"="true",
+  "type"="JAVA_UDF"
+);
+
+-- 创建SessionAgg UDF
+CREATE GLOBAL FUNCTION session_agg(STRING, STRING, STRING, INT, INT, STRING) RETURNS STRING PROPERTIES (
+  "file"="file:///opt/apache-doris/jdbc_drivers/doris-udf-demo.jar",
+  "symbol"="org.apache.doris.udf.SessionAgg",
   "always_nullable"="true",
   "type"="JAVA_UDF"
 );
@@ -270,4 +279,45 @@ group by
 order by
   ifnull (group0, 'Total'),
   funnel_level
+;
+
+
+-- 测试session_agg
+
+with event_log as (
+select '2024-01-01 00:00:00.123' as dt,'payne' as uid,'reg' as event,'tiktok#1' as group0,'cn' as group1
+union all
+select '2024-01-01 00:00:01.345' as dt,'payne' as uid,'iap' as event,'tiktok#1' as group0,'cn' as group1
+union all
+select '2024-01-01 00:00:03.111' as dt,'payne' as uid,'chat' as event,'tiktok#1' as group0,'cn' as group1
+union all
+select '2024-02-01 00:00:00.012' as dt,'payne' as uid,'reg' as event,'fb@,#2' as group0,'cn' as group1
+union all
+select '2024-02-01 00:00:01.001' as dt,'payne' as uid,'iap' as event,'fb@,#2' as group0,'cn' as group1
+union all
+select '2024-02-01 00:00:02.434' as dt,'payne' as uid,'chat' as event,'fb' as group0,'cn' as group1
+)
+, session_udf as (
+    SELECT 
+        uid,
+        session_agg(
+            'iap',           -- 标记事件名称
+            'start',         -- 标记事件类型：start/end
+            group_concat(path), -- 事件字符串
+            30*60,           -- 会话间隔时长（秒）
+            10,              -- 会话最大步数
+            'default'        -- 分析模式
+        ) as session_result
+    FROM (
+        select 
+            json_array(dt,event,group0,group1)  as path,
+            uid
+        from   event_log
+    ) t1
+    GROUP BY uid
+)
+select * 
+    from 
+    session_udf
+    lateral view EXPLODE(cast(session_result as ARRAY<varchar>)) tmp as e1
 ;
