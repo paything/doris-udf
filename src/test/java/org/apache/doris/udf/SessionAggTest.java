@@ -135,5 +135,29 @@ public class SessionAggTest {
         String result11 = sessionAgg.evaluate("iap", "start", input11, 1800, 10, "default");
         System.out.println("输出结果: " + result11);
         System.out.println();
+
+        System.out.println("=== 测试12：标记事件在会话间隔内多次出现应合并为一条路径 ===");
+        String input12 = "[\"2024-01-01 00:00:00.000\",\"iap\",\"product1\",\"cn\"],[\"2024-01-01 00:00:01.000\",\"chat\",\"product1\",\"cn\"],[\"2024-01-01 00:00:02.000\",\"iap\",\"product2\",\"cn\"]";
+        System.out.println("输入数据: " + input12);
+        System.out.println("标记事件: iap");
+        System.out.println("标记类型: start");
+        System.out.println("会话间隔: 1800秒");
+        System.out.println("最大步数: 10");
+        System.out.println("分析模式: default");
+        String result12 = sessionAgg.evaluate("iap", "start", input12, 1800, 10, "default");
+        System.out.println("输出结果: " + result12);
+        System.out.println();
+        
+        System.out.println("=== 测试13：标记事件间隔超时应分割为多条路径 ===");
+        String input13 = "[\"2024-01-01 00:00:00.000\",\"iap\",\"product1\",\"cn\"],[\"2024-01-01 00:00:01.000\",\"chat\",\"product1\",\"cn\"],[\"2024-01-01 00:31:00.000\",\"iap\",\"product2\",\"cn\"]";
+        System.out.println("输入数据: " + input13);
+        System.out.println("标记事件: iap");
+        System.out.println("标记类型: start");
+        System.out.println("会话间隔: 1800秒");
+        System.out.println("最大步数: 10");
+        System.out.println("分析模式: default");
+        String result13 = sessionAgg.evaluate("iap", "start", input13, 1800, 10, "default");
+        System.out.println("输出结果: " + result13);
+        System.out.println();
     }
 } 

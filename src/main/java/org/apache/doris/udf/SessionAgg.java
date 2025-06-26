@@ -65,15 +65,25 @@ public class SessionAgg extends UDF {
             boolean shouldStartNewSession = false;
             
             if ("start".equals(markType)) {
-                // 以标记事件开始新会话
-                shouldStartNewSession = markEvent.equals(event.eventName);
+                // 以标记事件开始新会话，但只有在没有当前会话或时间间隔超时时才开始新会话
+                if (currentSession == null) {
+                    shouldStartNewSession = markEvent.equals(event.eventName);
+                } else {
+                    // 检查时间间隔
+                    EventData lastEvent = currentSession.events.get(currentSession.events.size() - 1);
+                    long timeDiff = event.timestamp - lastEvent.timestamp;
+                    
+                    if (timeDiff > sessionIntervalSeconds * 1000L) {
+                        // 时间间隔超过限制，结束当前会话，开始新会话
+                        sessions.add(currentSession);
+                        currentSession = null;
+                        shouldStartNewSession = markEvent.equals(event.eventName);
+                    }
+                }
             }
             
             // 开始新会话
             if (shouldStartNewSession) {
-                if (currentSession != null) {
-                    sessions.add(currentSession);
-                }
                 currentSession = new Session();
                 currentSession.events.add(event);
                 continue;
