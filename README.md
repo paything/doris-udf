@@ -95,7 +95,7 @@ PROPERTIES (
 
 ### 4. 使用示例
 
-#### WindowFunnel 使用示例
+#### WindowFunnel 使用示例（直接输出分析结果的语句见test.sql）
 ```sql
 with event_log as (
 select '2024-01-01 00:00:00.123' as dt,'payne' as uid,'reg' as event,'tiktok#1' as group0
@@ -152,7 +152,7 @@ select *
 ;
 ```
 
-#### SessionAgg 使用示例
+#### SessionAgg 使用示例（直接输出分析结果的语句见test.sql）
 ```sql
 with event_log as (
 select '2024-01-01 00:00:00.123' as dt,'payne' as uid,'reg' as event,'tiktok#1' as group0,'cn' as group1
