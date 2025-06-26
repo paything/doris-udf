@@ -123,5 +123,17 @@ public class SessionAggTest {
         String result10 = sessionAgg.evaluate("iap", "start", input10, 1800, 10, "default");
         System.out.println("输出结果: " + result10);
         System.out.println();
+
+        System.out.println("=== 测试11：分组值为空测试 ===");
+        String input11 = "[\"2024-01-01 00:00:00.000\",\"iap\",\"\",\"\"],[\"2024-01-01 00:00:01.000\",\"chat\",\"\",\"\"],[\"2024-01-01 00:00:02.000\",\"iap\",\"\",\"\"]";
+        System.out.println("输入数据: " + input11);
+        System.out.println("标记事件: iap");
+        System.out.println("标记类型: start");
+        System.out.println("会话间隔: 1800秒");
+        System.out.println("最大步数: 10");
+        System.out.println("分析模式: default");
+        String result11 = sessionAgg.evaluate("iap", "start", input11, 1800, 10, "default");
+        System.out.println("输出结果: " + result11);
+        System.out.println();
     }
 } 

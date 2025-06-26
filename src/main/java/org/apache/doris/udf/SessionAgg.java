@@ -221,8 +221,8 @@ public class SessionAgg extends UDF {
     private List<EventData> parseEventString(String eventString) {
         List<EventData> events = new ArrayList<>();
         
-        // 匹配每个事件数组
-        Pattern pattern = Pattern.compile("\\[\"([^\"]+)\",\"([^\"]+)\",\"([^\"]+)\",\"([^\"]+)\"\\]");
+        // 匹配每个事件数组，允许空字符串
+        Pattern pattern = Pattern.compile("\\[\"([^\"]*)\",\"([^\"]*)\",\"([^\"]*)\",\"([^\"]*)\"\\]");
         Matcher matcher = pattern.matcher(eventString);
         
         while (matcher.find()) {
