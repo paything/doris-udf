@@ -66,32 +66,47 @@ public class SessionAgg extends UDF {
     private List<Session> buildSessions(List<EventData> events, String markEvent, String markType,
                                       int sessionIntervalSeconds, int maxSteps, int maxGroupCount, String replaceValue, String mode) {
         List<Session> sessions = new ArrayList<>();
-        Session currentSession = null;
         
         // 处理分组值数量控制
         if (maxGroupCount > 0) {
             events = processGroupCountLimit(events, maxGroupCount, replaceValue);
         }
         
+        if ("start".equals(markType)) {
+            // start模式：从标记事件开始正向构建会话
+            return buildStartSessions(events, markEvent, sessionIntervalSeconds, maxSteps, mode);
+        } else if ("end".equals(markType)) {
+            // end模式：从标记事件开始逆序回数路径节点
+            return buildEndSessions(events, markEvent, sessionIntervalSeconds, maxSteps, mode);
+        }
+        
+        return sessions;
+    }
+    
+    /**
+     * 构建start模式的会话列表
+     */
+    private List<Session> buildStartSessions(List<EventData> events, String markEvent,
+                                           int sessionIntervalSeconds, int maxSteps, String mode) {
+        List<Session> sessions = new ArrayList<>();
+        Session currentSession = null;
+        
         for (EventData event : events) {
             // 检查是否需要开始新会话
             boolean shouldStartNewSession = false;
             
-            if ("start".equals(markType)) {
-                // 以标记事件开始新会话，但只有在没有当前会话或时间间隔超时时才开始新会话
-                if (currentSession == null) {
+            if (currentSession == null) {
+                shouldStartNewSession = markEvent.equals(event.eventName);
+            } else {
+                // 检查时间间隔
+                EventData lastEvent = currentSession.events.get(currentSession.events.size() - 1);
+                long timeDiff = event.timestamp - lastEvent.timestamp;
+                
+                if (timeDiff > sessionIntervalSeconds * 1000L) {
+                    // 时间间隔超过限制，结束当前会话，开始新会话
+                    sessions.add(currentSession);
+                    currentSession = null;
                     shouldStartNewSession = markEvent.equals(event.eventName);
-                } else {
-                    // 检查时间间隔
-                    EventData lastEvent = currentSession.events.get(currentSession.events.size() - 1);
-                    long timeDiff = event.timestamp - lastEvent.timestamp;
-                    
-                    if (timeDiff > sessionIntervalSeconds * 1000L) {
-                        // 时间间隔超过限制，结束当前会话，开始新会话
-                        sessions.add(currentSession);
-                        currentSession = null;
-                        shouldStartNewSession = markEvent.equals(event.eventName);
-                    }
                 }
             }
             
@@ -133,14 +148,6 @@ public class SessionAgg extends UDF {
                     }
                 }
             }
-            
-            // 处理end模式
-            if ("end".equals(markType) && markEvent.equals(event.eventName)) {
-                if (currentSession != null) {
-                    sessions.add(currentSession);
-                    currentSession = null;
-                }
-            }
         }
         
         // 添加最后一个会话
@@ -149,6 +156,105 @@ public class SessionAgg extends UDF {
         }
         
         return sessions;
+    }
+    
+    /**
+     * 构建end模式的会话列表
+     */
+    private List<Session> buildEndSessions(List<EventData> events, String markEvent,
+                                         int sessionIntervalSeconds, int maxSteps, String mode) {
+        List<Session> sessions = new ArrayList<>();
+        
+        // 找到所有标记事件的位置
+        List<Integer> markEventIndices = new ArrayList<>();
+        for (int i = 0; i < events.size(); i++) {
+            if (markEvent.equals(events.get(i).eventName)) {
+                markEventIndices.add(i);
+            }
+        }
+        
+        // 为每个标记事件构建会话
+        for (int markIndex : markEventIndices) {
+            Session session = new Session();
+            EventData markEventData = events.get(markIndex);
+            
+            // 从标记事件开始，逆序向前查找符合条件的事件
+            List<EventData> sessionEvents = new ArrayList<>();
+            sessionEvents.add(markEventData); // 先添加标记事件
+            
+            // 逆序向前查找
+            for (int i = markIndex - 1; i >= 0; i--) {
+                EventData currentEvent = events.get(i);
+                
+                // 检查时间间隔（与标记事件的时间差）
+                long timeDiff = markEventData.timestamp - currentEvent.timestamp;
+                if (timeDiff > sessionIntervalSeconds * 1000L) {
+                    break; // 时间间隔超过限制，停止查找
+                }
+                
+                // 检查最大步数限制
+                if (sessionEvents.size() >= maxSteps) {
+                    break;
+                }
+                
+                // 根据模式判断是否应该添加事件
+                if (shouldAddEventForEndMode(sessionEvents, currentEvent, mode)) {
+                    sessionEvents.add(0, currentEvent); // 在开头插入，保持时间顺序
+                }
+            }
+            
+            session.events = sessionEvents;
+            sessions.add(session);
+        }
+        
+        return sessions;
+    }
+    
+    /**
+     * 为end模式判断是否应该添加事件
+     */
+    private boolean shouldAddEventForEndMode(List<EventData> sessionEvents, EventData event, String mode) {
+        if (sessionEvents.isEmpty()) {
+            return true;
+        }
+        
+        switch (mode) {
+            case MODE_DEFAULT:
+                return true;
+                
+            case MODE_CONS_UNIQ:
+                // 连续事件去重（在end模式中，检查与已添加的最后一个事件是否相同）
+                EventData lastAddedEvent = sessionEvents.get(sessionEvents.size() - 1);
+                return !event.eventName.equals(lastAddedEvent.eventName);
+                
+            case MODE_SESSION_UNIQ:
+                // 事件严格去重
+                for (EventData existingEvent : sessionEvents) {
+                    if (event.eventName.equals(existingEvent.eventName)) {
+                        return false;
+                    }
+                }
+                return true;
+                
+            case MODE_CONS_UNIQ_WITH_GROUP:
+                // 连续事件去重（带分组）
+                EventData lastAddedEventWithGroup = sessionEvents.get(sessionEvents.size() - 1);
+                return !(event.eventName.equals(lastAddedEventWithGroup.eventName) && 
+                        event.groups.equals(lastAddedEventWithGroup.groups));
+                
+            case MODE_SESSION_UNIQ_WITH_GROUP:
+                // 事件严格去重（带分组）
+                for (EventData existingEvent : sessionEvents) {
+                    if (event.eventName.equals(existingEvent.eventName) && 
+                        event.groups.equals(existingEvent.groups)) {
+                        return false;
+                    }
+                }
+                return true;
+                
+            default:
+                return true;
+        }
     }
     
     /**

@@ -5,7 +5,7 @@
 - **SessionAgg**: 专门用于用户会话聚合，根据标记事件和会话规则聚合用户行为序列
 
 该项目Java代码部分由Ai创建，SHOW YOU MY TALK: .specstory/history
-https://share.specstory.com/stories/427e899a-0b11-42ee-a9c6-32c14d3c4a4f
+https://share.specstory.com/stories/b773244c-459e-4d77-9cb6-57086131430a
 SQL部分还是手动写
 
 ## 功能特性
@@ -21,11 +21,14 @@ SQL部分还是手动写
 
 ### SessionAgg 会话聚合
 - 支持多种会话标记模式（start/end）
+  - **start模式**：从标记事件开始正向构建会话，包含标记事件及后续符合条件的事件
+  - **end模式**：从标记事件开始逆序回数路径节点，包含标记事件及之前符合条件的事件
 - 可配置的会话间隔和最大步数
 - 五种去重模式：default、cons_uniq、session_uniq、cons_uniq_with_group、session_uniq_with_group
 - 支持事件分组聚合
 - 毫秒级时间戳精度
 - 支持混合时间格式（毫秒级和秒级）
+- 支持分组值数量控制和自定义替换值
 
 ## 项目结构
 
@@ -223,6 +226,61 @@ from
     session_udf lateral view EXPLODE(cast(session_result as ARRAY<varchar>)) tmp as e1    
 group by e1
 ```
+
+#### SessionAgg end模式使用示例
+```sql
+-- end模式：从logout事件开始逆序回数路径节点
+with event_log as (
+select '2024-01-01 00:00:00.000' as dt,'user1' as uid,'login' as event,'product1' as group0,'cn' as group1
+union all
+select '2024-01-01 00:00:01.000' as dt,'user1' as uid,'iap' as event,'product1' as group0,'cn' as group1
+union all
+select '2024-01-01 00:00:02.000' as dt,'user1' as uid,'chat' as event,'product1' as group0,'cn' as group1
+union all
+select '2024-01-01 00:00:03.000' as dt,'user1' as uid,'logout' as event,'product1' as group0,'cn' as group1
+union all
+select '2024-01-01 00:30:00.000' as dt,'user2' as uid,'login' as event,'product2' as group0,'cn' as group1
+union all
+select '2024-01-01 00:30:01.000' as dt,'user2' as uid,'iap' as event,'product2' as group0,'cn' as group1
+union all
+select '2024-01-01 00:30:02.000' as dt,'user2' as uid,'logout' as event,'product2' as group0,'cn' as group1
+)
+,session_udf as (
+select 
+    path_uid,
+    user_session_agg(
+        'logout',           -- 标记事件：logout
+        'end',              -- 标记类型：end模式
+        group_concat(path),
+        1800,               -- 会话间隔：30分钟
+        10,                 -- 最大步数：10步
+        10,                 -- 分组值最大数量：10个
+        '其他',             -- 替换值：其他
+        'default'           -- 分析模式：default
+    ) as session_result
+from (
+    select
+        json_array(dt,event,group0,group1) as path,
+        uid as path_uid
+    from event_log
+) t1
+group by path_uid
+)
+select 
+    e1,
+    count(1) as value
+from session_udf 
+lateral view EXPLODE(cast(session_result as ARRAY<varchar>)) tmp as e1    
+group by e1
+;
+```
+
+**end模式说明**：
+- **功能**：从标记事件（如logout）开始逆序回数路径节点
+- **应用场景**：分析用户退出前的行为路径，了解用户退出前的操作序列
+- **输出结果**：每个会话包含从标记事件开始逆序回数的所有符合条件的事件
+- **时间限制**：只包含与标记事件时间间隔在指定范围内的历史事件
+- **步数限制**：受最大步数参数控制，从标记事件开始逆序计算
 
 ## 详细使用说明
 

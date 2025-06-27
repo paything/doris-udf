@@ -270,5 +270,53 @@ public class SessionAggTest {
         String result19 = sessionAgg.evaluate("iap", "start", input19, 1800, 10, 2, "长尾", "default");
         System.out.println("结果: " + result19);
         System.out.println();
+
+        System.out.println("=== 测试20：end模式基础测试 ===");
+        String input20 = "[\"2024-01-01 00:00:00.000\",\"login\",\"product1\",\"cn\"],[\"2024-01-01 00:00:01.000\",\"iap\",\"product1\",\"cn\"],[\"2024-01-01 00:00:02.000\",\"chat\",\"product1\",\"cn\"],[\"2024-01-01 00:00:03.000\",\"logout\",\"product1\",\"cn\"]";
+        System.out.println("测试end模式（以logout为结束事件）: " + input20);
+        System.out.println("说明: end模式应该从logout事件开始逆序回数路径节点");
+        String result20 = sessionAgg.evaluate("logout", "end", input20, 1800, 10, 10, "其他", "default");
+        System.out.println("结果: " + result20);
+        System.out.println();
+
+        System.out.println("=== 测试21：end模式多会话测试 ===");
+        String input21 = "[\"2024-01-01 00:00:00.000\",\"login\",\"product1\",\"cn\"],[\"2024-01-01 00:00:01.000\",\"iap\",\"product1\",\"cn\"],[\"2024-01-01 00:00:02.000\",\"logout\",\"product1\",\"cn\"],[\"2024-01-01 00:30:00.000\",\"login\",\"product2\",\"cn\"],[\"2024-01-01 00:30:01.000\",\"iap\",\"product2\",\"cn\"],[\"2024-01-01 00:30:02.000\",\"logout\",\"product2\",\"cn\"]";
+        System.out.println("测试end模式多会话（两个logout事件）: " + input21);
+        System.out.println("说明: 应该产生两个会话，每个会话从logout开始逆序回数");
+        String result21 = sessionAgg.evaluate("logout", "end", input21, 1800, 10, 10, "其他", "default");
+        System.out.println("结果: " + result21);
+        System.out.println();
+
+        System.out.println("=== 测试22：end模式会话间隔超时测试 ===");
+        String input22 = "[\"2024-01-01 00:00:00.000\",\"login\",\"product1\",\"cn\"],[\"2024-01-01 00:00:01.000\",\"iap\",\"product1\",\"cn\"],[\"2024-01-01 00:00:02.000\",\"chat\",\"product1\",\"cn\"],[\"2024-01-01 00:31:00.000\",\"logout\",\"product1\",\"cn\"]";
+        System.out.println("测试end模式会话间隔超时: " + input22);
+        System.out.println("说明: logout事件与前面事件间隔超过30分钟，应该只包含logout事件本身");
+        String result22 = sessionAgg.evaluate("logout", "end", input22, 1800, 10, 10, "其他", "default");
+        System.out.println("结果: " + result22);
+        System.out.println();
+
+        System.out.println("=== 测试23：end模式最大步数限制测试 ===");
+        String input23 = "[\"2024-01-01 00:00:00.000\",\"event1\",\"product1\",\"cn\"],[\"2024-01-01 00:00:01.000\",\"event2\",\"product1\",\"cn\"],[\"2024-01-01 00:00:02.000\",\"event3\",\"product1\",\"cn\"],[\"2024-01-01 00:00:03.000\",\"event4\",\"product1\",\"cn\"],[\"2024-01-01 00:00:04.000\",\"event5\",\"product1\",\"cn\"],[\"2024-01-01 00:00:05.000\",\"logout\",\"product1\",\"cn\"]";
+        System.out.println("测试end模式最大步数限制（限制为3步）: " + input23);
+        System.out.println("说明: 从logout开始逆序回数，最多只能包含3个事件");
+        String result23 = sessionAgg.evaluate("logout", "end", input23, 1800, 3, 10, "其他", "default");
+        System.out.println("结果: " + result23);
+        System.out.println();
+
+        System.out.println("=== 测试24：end模式去重测试 ===");
+        String input24 = "[\"2024-01-01 00:00:00.000\",\"login\",\"product1\",\"cn\"],[\"2024-01-01 00:00:01.000\",\"iap\",\"product1\",\"cn\"],[\"2024-01-01 00:00:02.000\",\"iap\",\"product2\",\"cn\"],[\"2024-01-01 00:00:03.000\",\"logout\",\"product1\",\"cn\"]";
+        System.out.println("测试end模式去重（session_uniq模式）: " + input24);
+        System.out.println("说明: 从logout开始逆序回数，应该去重重复的iap事件");
+        String result24 = sessionAgg.evaluate("logout", "end", input24, 1800, 10, 10, "其他", "session_uniq");
+        System.out.println("结果: " + result24);
+        System.out.println();
+
+        System.out.println("=== 测试25：end模式带分组去重测试 ===");
+        String input25 = "[\"2024-01-01 00:00:00.000\",\"login\",\"product1\",\"cn\"],[\"2024-01-01 00:00:01.000\",\"iap\",\"product1\",\"cn\"],[\"2024-01-01 00:00:02.000\",\"iap\",\"product2\",\"cn\"],[\"2024-01-01 00:00:03.000\",\"iap\",\"product1\",\"cn\"],[\"2024-01-01 00:00:04.000\",\"logout\",\"product1\",\"cn\"]";
+        System.out.println("测试end模式带分组去重（session_uniq_with_group模式）: " + input25);
+        System.out.println("说明: 从logout开始逆序回数，应该去重相同事件名+分组的组合");
+        String result25 = sessionAgg.evaluate("logout", "end", input25, 1800, 10, 10, "其他", "session_uniq_with_group");
+        System.out.println("结果: " + result25);
+        System.out.println();
     }
 } 

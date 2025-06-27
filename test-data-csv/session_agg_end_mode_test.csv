@@ -1,0 +1,16 @@
+dt,uid,event,group0,group1
+2024-01-01 00:00:00.000,user1,login,product1,cn
+2024-01-01 00:00:01.000,user1,iap,product1,cn
+2024-01-01 00:00:02.000,user1,chat,product1,cn
+2024-01-01 00:00:03.000,user1,logout,product1,cn
+2024-01-01 00:30:00.000,user2,login,product2,cn
+2024-01-01 00:30:01.000,user2,iap,product2,cn
+2024-01-01 00:30:02.000,user2,logout,product2,cn
+2024-01-01 01:00:00.000,user3,login,product3,us
+2024-01-01 01:00:01.000,user3,browse,product3,us
+2024-01-01 01:00:02.000,user3,iap,product3,us
+2024-01-01 01:00:03.000,user3,chat,product3,us
+2024-01-01 01:00:04.000,user3,iap,product4,us
+2024-01-01 01:00:05.000,user3,logout,product3,us
+2024-01-01 01:31:00.000,user4,login,product4,us
+2024-01-01 01:31:01.000,user4,logout,product4,us
