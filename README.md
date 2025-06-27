@@ -131,7 +131,7 @@ select '2024-01-02 00:00:03.012' as dt,'cjt' as uid,'iap' as event,'f@#,b' as gr
             group_concat(_event_string)
         ) as funnel_result
     FROM (
-        select 
+select 
             *,
             concat(dt,'#'
             ,event='reg'
@@ -167,32 +167,38 @@ select '2024-02-01 00:00:01.001' as dt,'payne' as uid,'iap' as event,'fb@,#2' as
 union all
 select '2024-02-01 00:00:02.434' as dt,'payne' as uid,'chat' as event,'fb' as group0,'cn' as group1
 )
-, session_udf as (
-    SELECT 
-        uid,
-        session_agg(
-            'iap',           -- 标记事件名称
-            'start',         -- 标记事件类型：start/end
-            group_concat(path), -- 事件字符串
-            30*60,           -- 会话间隔时长（秒）
-            10,              -- 会话最大步数
-            1,              -- 分组值最大数量
-            '其他',          -- 分组值超过限制时的替换值
-            'default'        -- 分析模式
-        ) as session_result
-    FROM (
-        select 
+--5种分析模式：default,cons_uniq,session_uniq,cons_uniq_with_group,session_uniq_with_group
+,session_udf as (
+select 
+    path_uid,
+    session_agg(
+        'reg',
+        'start',
+        group_concat(path),
+        1800,
+        10,
+        2,
+        'replace_value',
+        'session_uniq_with_group' 
+    ) as session_result
+from (
+    select
+            --哪些列作为分组，就塞到event后面，可以不带任何分组
             json_array(dt,event,group0,group1)  as path,
-            uid
-        from   event_log
+            uid as path_uid
+                from 
+            event_log
     ) t1
-    GROUP BY uid
+group by 
+    path_uid
 )
-select * 
-    from 
-    session_udf
-    lateral view EXPLODE(cast(session_result as ARRAY<varchar>)) tmp as e1
-;
+
+select 
+    e1,
+    count(1) as value
+from
+    session_udf lateral view EXPLODE(cast(session_result as ARRAY<varchar>)) tmp as e1    
+group by e1
 ```
 
 ## 详细使用说明
@@ -614,14 +620,14 @@ select '2024-01-02 00:00:03.012' as dt,'cjt' as uid,'iap' as event,'f@#,b' as gr
     FROM (
         select 
             *,
-            concat(dt,'#'
-            ,event='reg'
-            ,'@',event='iap'
-            ,'@',event='chat'
-            ,'#',group0
+        concat(dt,'#'
+        ,event='reg'
+        ,'@',event='iap'
+        ,'@',event='chat'
+        ,'#',group0
             ) as _event_string
-        from event_log
-    ) t1
+    from event_log
+) t1
     GROUP BY 
     uid
     ,link_col  --关联属性列，不需要就去掉
@@ -719,3 +725,189 @@ order by
   funnel_level
 ;
 ```
+
+# Doris数据导入工具import_to_doris.py
+
+这个工具用于将CSV格式的事件数据导入到Apache Doris数据库中。
+
+## 功能特性
+
+- ✅ 自动检查并创建数据库和表
+- ✅ 支持多种文件编码（自动检测）
+- ✅ 数据验证和清洗
+- ✅ 批量导入（支持大数据量）
+- ✅ 错误处理和日志记录
+- ✅ 支持特殊字符的分组字段
+
+## 环境要求
+
+- Python 3.7+
+- Apache Doris 2.0+
+- 网络连接到Doris集群
+
+## 依赖包
+
+```bash
+pip install pandas requests pymysql chardet
+```
+
+## 配置说明
+
+在`import_to_doris.py`中修改以下配置：
+
+```python
+# Doris 配置
+DORIS_HOST = '127.0.0.1'  # 修改为你的Doris FE节点地址
+# DORIS_HOST = '10.0.90.90'  # 示例：远程地址
+
+# 数据库和表配置
+database_name = "doris_udf_test"  # 数据库名
+table_name = "user_event_log"     # 表名
+```
+
+## CSV文件格式
+
+CSV文件必须包含以下列：
+
+| 列名 | 类型 | 说明 | 示例 |
+|------|------|------|------|
+| dt | datetime | 事件时间 | 2024-01-01 00:00:00.123 |
+| uid | string | 用户ID | user001 |
+| event | string | 事件名称 | login, browse, purchase |
+| group0 | string | 分组字段0 | tiktok#1, fb@,#2 |
+| group1 | string | 分组字段1 | cn, us |
+
+### 示例CSV文件
+
+```csv
+dt,uid,event,group0,group1
+2024-01-01 00:00:00.123,user001,login,tiktok#1,cn
+2024-01-01 00:00:01.456,user001,browse,tiktok#1,cn
+2024-01-01 00:00:02.789,user001,purchase,tiktok#1,cn
+```
+
+## 使用方法
+
+1. **准备CSV文件**
+   - 将CSV文件放在脚本同一目录下
+   - 确保文件格式符合要求
+
+2. **运行导入脚本**
+   ```bash
+   cd test-data-csv
+   python import_to_doris.py
+   ```
+
+3. **查看导入结果**
+   - 脚本会自动显示导入进度和结果
+   - 检查控制台输出的成功/失败信息
+
+## 表结构
+
+脚本会自动创建以下表结构：
+
+```sql
+CREATE TABLE user_event_log (
+    `dt` DATETIME(3) NOT NULL COMMENT '事件时间',
+    `uid` VARCHAR(100) NOT NULL COMMENT '用户ID',
+    `event` VARCHAR(100) NOT NULL COMMENT '事件名称',
+    `group0` VARCHAR(200) NULL COMMENT '分组字段0',
+    `group1` VARCHAR(200) NULL COMMENT '分组字段1',
+    `batch_id` BIGINT NOT NULL COMMENT '批次ID',
+    `file_name` VARCHAR(255) NOT NULL COMMENT '文件名',
+    INDEX idx_uid (`uid`),
+    INDEX idx_event (`event`),
+    INDEX idx_dt (`dt`),
+    INDEX idx_batch_id (`batch_id`)
+) ENGINE=OLAP
+DUPLICATE KEY(`dt`, `uid`, `event`, `group0`, `group1`)
+DISTRIBUTED BY HASH(`uid`) BUCKETS 10
+```
+
+## 数据验证
+
+脚本会进行以下数据验证：
+
+1. **文件编码检测**：自动检测CSV文件编码
+2. **列结构验证**：确保包含必需的列
+3. **数据类型转换**：将dt列转换为datetime格式
+4. **空值处理**：处理group0和group1的空值
+5. **无效数据过滤**：过滤掉dt为空的行
+
+## 错误处理
+
+- 数据库连接失败
+- 表创建失败
+- 文件编码问题
+- 数据格式错误
+- 网络连接问题
+
+## 批量导入
+
+- 默认批次大小：10,000条记录
+- 支持大数据量文件
+- 自动分批处理
+- 每批次独立导入
+
+## 日志信息
+
+脚本会输出详细的日志信息：
+
+```
+=== Doris数据导入工具 ===
+目标数据库: doris_udf_test
+目标表: user_event_log
+Doris主机: 127.0.0.1
+
+数据库 doris_udf_test 已存在
+表 user_event_log 已存在
+
+找到 2 个CSV文件:
+  1. event_log.csv
+  2. sample_data.csv
+
+==================================================
+开始处理文件: event_log.csv
+==================================================
+检测到文件 event_log.csv 的编码为: utf-8
+文件 event_log.csv 结构验证通过
+...
+```
+
+## 注意事项
+
+1. **网络连接**：确保能够连接到Doris集群
+2. **权限**：确保有创建数据库和表的权限
+3. **数据格式**：确保CSV文件格式正确
+4. **特殊字符**：支持包含特殊字符的分组字段
+5. **大数据量**：建议分批导入大数据量文件
+
+## 故障排除
+
+### 常见问题
+
+1. **连接失败**
+   - 检查Doris主机地址和端口
+   - 确认网络连接正常
+
+2. **权限错误**
+   - 确认用户有创建数据库和表的权限
+   - 检查用户名和密码
+
+3. **编码问题**
+   - 脚本会自动检测和转换编码
+   - 如果仍有问题，手动转换为UTF-8
+
+4. **数据格式错误**
+   - 检查CSV文件列名是否正确
+   - 确认dt列格式为datetime
+
+### 调试模式
+
+可以在脚本中添加更多调试信息：
+
+```python
+# 在main函数中添加
+import logging
+logging.basicConfig(level=logging.DEBUG)
+``` 

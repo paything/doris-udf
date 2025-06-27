@@ -1,0 +1,14 @@
+dt,uid,event,group0,group1
+2024-01-01 00:00:00,payne,login,"fb#@,",cn
+2024-01-01 00:00:01,payne,event_1,"fb#@,",cn
+2024-01-01 00:00:10.123,payne,event_2,"fb#@,",cn
+2024-01-01 00:00:00.123,user001,login,tiktok#1,cn
+2024-01-01 00:00:01.456,user001,browse,tiktok#1,cn
+2024-01-01 00:00:02.789,user001,purchase,tiktok#1,cn
+2024-01-01 00:00:03.012,user002,login,"fb@,#2",us
+2024-01-01 00:00:04.345,user002,browse,"fb@,#2",us
+2024-01-01 00:00:05.678,user003,login,wechat,cn
+2024-01-01 00:00:06.901,user003,browse,wechat,cn
+2024-01-01 00:00:07.234,user003,purchase,wechat,cn
+2024-01-01 00:00:08.567,user004,login,google,us
+2024-01-01 00:00:09,user004,browse,google,us
