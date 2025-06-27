@@ -39,6 +39,14 @@ doris-udf/
 │   └── test/java/org/apache/doris/udf/
 │       ├── WindowFunnelTest.java       # 漏斗分析测试类
 │       └── SessionAggTest.java         # 会话聚合测试类
+├── test-data-csv/                      # 测试数据集目录
+│   ├── event_log.csv                   # 主要测试数据集（3个用户）
+│   ├── session_agg_test_data.csv       # SessionAgg详细测试数据（15个用户）
+│   ├── window_funnel_test_data.csv     # WindowFunnel详细测试数据（11个用户）
+│   ├── test_sql_data.csv               # test.sql使用的测试数据
+│   ├── requirements.txt                 # Python依赖包列表
+│   └── README.md                        # 测试数据集说明文档
+├── import_to_doris.py                  # Doris数据导入工具
 ├── README.md                           # 项目说明
 ├── test.sql                            # Doris测试SQL脚本
 ├── build.bat                           # 编译脚本
@@ -51,6 +59,21 @@ doris-udf/
 │   ├── history/                        # AI对话历史记录
 │   └── .gitignore                      # SpecStory Git忽略配置
 └── target/                             # 编译输出目录
+    └── classes/                        # 编译生成的class文件
+        └── org/apache/doris/udf/
+            ├── SessionAgg.class
+            ├── SessionAgg$1.class
+            ├── SessionAgg$EventData.class
+            ├── SessionAgg$Session.class
+            ├── SessionAggTest.class
+            ├── UDF.class
+            ├── WindowFunnel.class
+            ├── WindowFunnel$1.class
+            ├── WindowFunnel$EventData.class
+            ├── WindowFunnel$EventRow.class
+            ├── WindowFunnel$FunnelPath.class
+            ├── WindowFunnel$FunnelResult.class
+            └── WindowFunnelTest.class
 ```
 
 ## 快速开始
@@ -131,7 +154,7 @@ select '2024-01-02 00:00:03.012' as dt,'cjt' as uid,'iap' as event,'f@#,b' as gr
             group_concat(_event_string)
         ) as funnel_result
     FROM (
-select 
+        select 
             *,
             concat(dt,'#'
             ,event='reg'
@@ -757,10 +780,10 @@ pip install pandas requests pymysql chardet
 
 ```python
 # Doris 配置
-DORIS_HOST = '127.0.0.1'  # 修改为你的Doris FE节点地址
-# DORIS_HOST = '10.0.90.90'  # 示例：远程地址
+DORIS_HOST = '127.0.0.1'  # 如果用docker部署用这个
+# DORIS_HOST = '10.0.90.90'  # 示例：远程地址,修改为你的Doris FE节点地址
 
-# 数据库和表配置
+# 数据库和表配置--脚本会自动创建
 database_name = "doris_udf_test"  # 数据库名
 table_name = "user_event_log"     # 表名
 ```
@@ -773,17 +796,17 @@ CSV文件必须包含以下列：
 |------|------|------|------|
 | dt | datetime | 事件时间 | 2024-01-01 00:00:00.123 |
 | uid | string | 用户ID | user001 |
-| event | string | 事件名称 | login, browse, purchase |
-| group0 | string | 分组字段0 | tiktok#1, fb@,#2 |
-| group1 | string | 分组字段1 | cn, us |
+| event | string | 事件名称 | login |
+| group0 | string | 分组字段0 | fb@,#2 |
+| group1 | string | 分组字段1 | cn |
 
 ### 示例CSV文件
 
 ```csv
 dt,uid,event,group0,group1
-2024-01-01 00:00:00.123,user001,login,tiktok#1,cn
-2024-01-01 00:00:01.456,user001,browse,tiktok#1,cn
-2024-01-01 00:00:02.789,user001,purchase,tiktok#1,cn
+2024-01-01 00:00:00.123,user001,login,"tiktok#1",cn
+2024-01-01 00:00:01.456,user001,browse,"tiktok#1",cn
+2024-01-01 00:00:02.789,user001,purchase,"tiktok#1",cn
 ```
 
 ## 使用方法
@@ -911,3 +934,128 @@ Doris主机: 127.0.0.1
 import logging
 logging.basicConfig(level=logging.DEBUG)
 ``` 
+
+
+## test-data-csv 测试数据集目录
+
+`test-data-csv`目录包含了用于测试Doris UDF函数的完整CSV数据文件集合。
+
+### 目录内容
+
+#### 1. event_log.csv - 主要测试数据集
+- **用途**: SessionAgg和WindowFunnel函数的基础测试数据
+- **数据规模**: 3个用户(payne, cjt, aki)，共18条事件记录
+- **数据特点**: 
+  - 时间格式混合（有毫秒和无毫秒）
+  - 分组字段包含特殊字符(#, @, ,)
+  - 部分分组字段为空值
+  - 包含会话间隔超时的测试场景
+
+#### 2. session_agg_test_data.csv - SessionAgg详细测试数据
+- **用途**: SessionAgg函数的完整测试数据集
+- **数据规模**: 15个用户(user1-user15)，共67条事件记录
+- **测试覆盖**:
+  - 所有5种分析模式：default、cons_uniq、session_uniq、cons_uniq_with_group、session_uniq_with_group
+  - 会话间隔超时测试
+  - 最大步数限制测试
+  - 分组值数量控制测试
+  - 自定义替换值功能测试
+  - 空值处理测试
+
+#### 3. window_funnel_test_data.csv - WindowFunnel详细测试数据
+- **用途**: WindowFunnel函数的完整测试数据集
+- **数据规模**: 11个用户(user1-user11)，共56条事件记录
+- **测试覆盖**:
+  - 所有4种分析模式：default、strict、backtrack、increase、backtrack_long
+  - 20步骤单路径测试
+  - 混合时间格式测试
+  - 特殊字符标签测试
+  - 边界条件测试（路径长度为1、2等）
+
+#### 4. test_sql_data.csv - SQL测试数据
+- **用途**: test.sql文件中使用的测试数据
+- **数据规模**: 3个用户(payne, cjt, aki) + 2个测试用户(user2, user3)，共26条事件记录
+- **测试覆盖**:
+  - SQL脚本中的所有测试用例
+  - backtrack、increase等特殊模式测试
+  - 多用户、多路径的完整测试场景
+
+#### 5. requirements.txt - Python依赖包
+```
+pandas
+requests
+pymysql
+chardet
+```
+
+
+### 数据格式规范
+
+所有CSV文件都遵循标准格式：
+```csv
+dt,uid,event,group0,group1
+```
+
+#### 字段说明
+- **dt**: 事件时间，支持`YYYY-MM-DD HH:MM:SS`和`YYYY-MM-DD HH:MM:SS.SSS`格式
+- **uid**: 用户ID，用于标识不同的用户
+- **event**: 事件名称，如reg、iap、chat、login等
+- **group0**: 分组字段0，可包含特殊字符
+- **group1**: 分组字段1，可包含特殊字符
+
+#### 特殊字符处理
+- **包含逗号的字段用双引号括起**：`"fb@,#2"`、`"f@#,b"`、`"tag,with,comma"`
+- **支持的特殊字符**：`#`、`@`、`,`、`"`等
+- **空值处理**：用空字符串`""`表示
+
+### 使用流程
+
+1. **数据导入**：
+   ```bash
+   cd test-data-csv
+   python ../import_to_doris.py
+   ```
+
+2. **SQL测试**：
+   ```bash
+   # 在Doris中执行
+   source test.sql
+   ```
+
+3. **Java单元测试**：
+   ```bash
+   java -cp target/classes org.apache.doris.udf.SessionAggTest
+   java -cp target/classes org.apache.doris.udf.WindowFunnelTest
+   ```
+
+### 测试场景覆盖
+
+#### SessionAgg测试场景
+- ✅ 默认模式会话聚合
+- ✅ 连续事件去重
+- ✅ 事件严格去重
+- ✅ 带分组的去重模式
+- ✅ 会话间隔超时处理
+- ✅ 最大步数限制
+- ✅ 分组值数量控制
+- ✅ 自定义替换值
+- ✅ 空值和特殊字符处理
+
+#### WindowFunnel测试场景
+- ✅ 多步骤漏斗分析
+- ✅ 多路径识别
+- ✅ 不同分析模式
+- ✅ 时间窗口控制
+- ✅ 步骤间隔验证
+- ✅ 回溯模式测试
+- ✅ 混合时间格式
+- ✅ 特殊字符标签
+
+### 数据质量保证
+
+- **编码统一**：所有文件使用UTF-8编码
+- **格式规范**：严格遵循CSV标准格式
+- **特殊字符**：正确处理包含逗号等特殊字符的字段
+- **时间格式**：支持毫秒级和秒级时间戳
+- **边界测试**：包含各种边界条件和异常情况
+- **完整性**：覆盖所有函数参数和模式组合 

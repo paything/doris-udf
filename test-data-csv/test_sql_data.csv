@@ -17,3 +17,9 @@ dt,uid,event,group0,group1
 2024-01-01 00:40:00,aki,event_1.1,fb,
 2024-01-01 00:40:00,aki,reg,tt,
 2024-01-01 00:40:00,aki,reg,fb,
+2024-01-01 00:00:00.000,user2,reg,te@st1,cn
+2024-01-01 00:00:00.200,user2,chat,te#st2,cn
+2024-01-01 00:00:00.300,user2,iap,"te,st3",cn
+2024-01-01 00:00:00.000,user3,reg,te@st1,cn
+2024-01-01 00:00:00.000,user3,iap,te#st2,cn
+2024-01-01 00:00:00.100,user3,chat,"te,st3",cn 
