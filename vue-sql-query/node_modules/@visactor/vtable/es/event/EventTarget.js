@@ -1,0 +1,58 @@
+import { isValid } from "@visactor/vutils";
+
+let idCount = 1;
+
+export class EventTarget {
+    constructor() {
+        this.listenersData = {
+            listeners: {},
+            listenerData: {}
+        };
+    }
+    on(type, listener) {
+        const list = this.listenersData.listeners[type] || (this.listenersData.listeners[type] = []);
+        list.push(listener);
+        const id = idCount++;
+        return this.listenersData.listenerData[id] = {
+            type: type,
+            listener: listener,
+            remove: () => {
+                delete this.listenersData.listenerData[id];
+                const index = list.indexOf(listener);
+                list.splice(index, 1), this.listenersData.listeners[type].length || delete this.listenersData.listeners[type];
+            }
+        }, id;
+    }
+    off(idOrType, listener) {
+        var _a;
+        if (listener) {
+            const type = idOrType;
+            this.removeEventListener(type, listener);
+        } else {
+            const id = idOrType;
+            if (!this.listenersData) return;
+            null === (_a = this.listenersData.listenerData[id]) || void 0 === _a || _a.remove();
+        }
+    }
+    addEventListener(type, listener, option) {
+        this.on(type, listener);
+    }
+    removeEventListener(type, listener) {
+        if (this.listenersData) for (const key in this.listenersData.listenerData) {
+            const listenerData = this.listenersData.listenerData[key];
+            listenerData.type === type && listenerData.listener === listener && this.off(key);
+        }
+    }
+    hasListeners(type) {
+        return !!this.listenersData && !!this.listenersData.listeners[type];
+    }
+    fireListeners(type, event) {
+        if (!this.listenersData) return [];
+        const list = this.listenersData.listeners[type];
+        return list ? list.map((listener => listener.call(this, event))).filter((r => isValid(r))) : [];
+    }
+    release() {
+        delete this.listenersData;
+    }
+}
+//# sourceMappingURL=EventTarget.js.map

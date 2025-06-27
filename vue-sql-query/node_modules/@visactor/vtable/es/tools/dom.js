@@ -1,0 +1,5 @@
+export function createElement(tagName, classNames) {
+    const element = document.createElement(tagName);
+    return classNames && element.classList.add(...classNames), element;
+}
+//# sourceMappingURL=dom.js.map

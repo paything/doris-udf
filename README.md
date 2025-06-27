@@ -30,6 +30,22 @@ SQL部分还是手动写
 - 支持混合时间格式（毫秒级和秒级）
 - 支持分组值数量控制和自定义替换值
 
+### Vue.js前端应用 (vue-sql-query)
+- **漏斗分析可视化**：支持漏斗图、箱型图展示漏斗分析结果
+- **会话聚合可视化**：支持桑基图展示用户路径流向分析
+- **参数配置界面**：提供友好的参数配置界面，支持实时调整分析参数
+- **数据表格展示**：展示原始查询结果数据
+- **响应式设计**：支持侧边栏折叠，适配不同屏幕尺寸
+- **实时查询**：支持参数调整后实时重新查询和图表更新
+
+### Python后端API服务 (app.py)
+- **RESTful API**：提供标准的REST API接口
+- **SQL查询代理**：代理前端SQL查询到Doris数据库
+- **数据格式转换**：自动处理数据格式转换和错误处理
+- **跨域支持**：支持前端跨域请求
+- **错误处理**：完善的错误处理和日志记录
+- **配置灵活**：支持配置Doris连接参数和API端口
+
 ## 项目结构
 
 ```
@@ -49,6 +65,16 @@ doris-udf/
 │   ├── test_sql_data.csv               # test.sql使用的测试数据
 │   ├── requirements.txt                 # Python依赖包列表
 │   └── README.md                        # 测试数据集说明文档
+├── vue-sql-query/                      # Vue.js前端应用
+│   ├── src/
+│   │   ├── App.vue                     # 主应用组件
+│   │   ├── main.js                     # Vue应用入口
+│   │   └── components/                 # Vue组件目录
+│   ├── public/                         # 静态资源目录
+│   ├── package.json                    # 前端依赖配置
+│   ├── vite.config.js                  # Vite构建配置
+│   └── README.md                       # 前端项目说明
+├── app.py                              # Python后端API服务
 ├── import_to_doris.py                  # Doris数据导入工具
 ├── README.md                           # 项目说明
 ├── test.sql                            # Doris测试SQL脚本
@@ -93,7 +119,34 @@ build.bat         # 编译Java代码并生成JAR包
 jar2doris.bat     # 将JAR包复制到Doris的FE和BE容器中
 ```
 
-### 3. 在Doris中注册UDF
+### 3. 启动后端API服务
+
+```bash
+python app.py     # 启动Python后端API服务（默认端口5012）
+```
+
+**后端功能说明**：
+- 提供 `/query` 接口处理前端SQL查询请求
+- 自动连接Doris数据库执行查询
+- 返回JSON格式的查询结果
+- 支持错误处理和日志记录
+- 默认监听端口5012，可通过环境变量配置
+
+### 4. 启动前端应用
+
+```bash
+cd vue-sql-query  # 进入前端项目目录
+npm run dev       # 启动Vue.js开发服务器（默认端口5173）
+```
+
+**前端功能说明**：
+- 访问 `http://localhost:5173` 打开前端应用
+- 左侧参数面板可配置漏斗分析和会话聚合参数
+- 支持参数实时调整和查询结果可视化展示
+- 提供漏斗图、箱型图、桑基图等多种图表展示
+- 支持侧边栏折叠，优化显示空间
+
+### 5. 在Doris中注册UDF
 
 #### WindowFunnel UDF
 ```sql
@@ -1449,3 +1502,96 @@ dt,uid,event,group0,group1
 - **时间格式**：支持毫秒级和秒级时间戳
 - **边界测试**：包含各种边界条件和异常情况
 - **完整性**：覆盖所有函数参数和模式组合 
+
+### 6. 使用示例
+
+## 完整使用流程
+
+### 1. 环境准备
+确保已安装以下环境：
+- Java 8+
+- Python 3.7+
+- Node.js 16+
+- Apache Doris 2.0+
+- MySQL客户端（用于连接Doris）
+
+### 2. 数据准备
+```bash
+# 导入测试数据到Doris
+python import_to_doris.py
+```
+
+### 3. 编译部署
+```bash
+# 编译Java UDF
+build.bat
+
+# 部署到Doris容器
+jar2doris.bat
+```
+
+### 4. 启动服务
+```bash
+# 启动后端API服务
+python app.py
+
+# 新开终端，启动前端应用
+cd vue-sql-query
+npm run dev
+```
+
+### 5. 注册UDF函数
+在Doris中执行以下SQL：
+```sql
+-- 注册WindowFunnel UDF
+CREATE GLOBAL FUNCTION window_funnel_track(INT, INT, STRING, STRING) 
+RETURNS STRING 
+PROPERTIES (
+    "file"="file:///opt/apache-doris/jdbc_drivers/doris-udf-demo.jar",
+    "symbol"="org.apache.doris.udf.WindowFunnel",
+    "always_nullable"="true",
+    "type"="JAVA_UDF"
+);
+
+-- 注册SessionAgg UDF
+CREATE GLOBAL FUNCTION user_session_agg(STRING, STRING, STRING, INT, INT, INT, STRING, STRING) 
+RETURNS STRING 
+PROPERTIES (
+    "file"="file:///opt/apache-doris/jdbc_drivers/doris-udf-demo.jar",
+    "symbol"="org.apache.doris.udf.SessionAgg",
+    "always_nullable"="true",
+    "type"="JAVA_UDF"
+);
+```
+
+### 6. 使用应用
+1. 打开浏览器访问 `http://localhost:5173`
+2. 在左侧参数面板配置分析参数
+3. 点击"查询"按钮执行分析
+4. 查看漏斗图、箱型图、桑基图等可视化结果
+5. 调整参数重新查询，实时查看结果变化
+
+### 7. 故障排除
+- **前端无法连接后端**：检查后端服务是否启动在5012端口
+- **查询失败**：检查Doris连接和UDF函数是否注册成功
+- **图表不显示**：检查浏览器控制台是否有JavaScript错误
+- **数据为空**：确认Doris中是否有测试数据
+
+## 技术架构
+
+```
+┌─────────────────┐    HTTP/JSON    ┌─────────────────┐    SQL    ┌─────────────────┐
+│   Vue.js前端    │ ──────────────→ │  Python后端API  │ ────────→ │   Apache Doris  │
+│  (端口5173)     │ ←────────────── │   (端口5012)    │ ←──────── │   (端口9030)    │
+└─────────────────┘                 └─────────────────┘           └─────────────────┘
+         │                                   │                           │
+         │                                   │                           │
+         ▼                                   ▼                           ▼
+    ┌─────────┐                       ┌─────────┐                   ┌─────────┐
+    │ 漏斗图  │                       │ 错误处理│                   │ UDF函数 │
+    │ 箱型图  │                       │ 日志记录│                   │ 数据查询│
+    │ 桑基图  │                       │ 格式转换│                   │ 结果返回│
+    └─────────┘                       └─────────┘                   └─────────┘
+```
+
+这个架构提供了完整的漏斗分析和会话聚合解决方案，从前端可视化到后端数据处理，再到数据库存储和计算，形成了一套完整的数据分析平台。
