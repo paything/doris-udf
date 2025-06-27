@@ -23,11 +23,12 @@ public class SessionAgg extends UDF {
      * @param eventString 事件字符串，格式：["时间戳","事件名","group0","group1"],...
      * @param sessionIntervalSeconds 会话间隔时长（秒）
      * @param maxSteps 会话最大步数
+     * @param maxGroupCount 分组值最大数量，超过此数量的分组值会被合并为"其他"
      * @param mode 分析模式
      * @return 会话聚合结果
      */
     public String evaluate(String markEvent, String markType, String eventString, 
-                          Integer sessionIntervalSeconds, Integer maxSteps, String mode) {
+                          Integer sessionIntervalSeconds, Integer maxSteps, Integer maxGroupCount, String mode) {
         if (eventString == null || eventString.isEmpty()) {
             return null;
         }
@@ -41,7 +42,7 @@ public class SessionAgg extends UDF {
             
             // 根据标记类型处理事件
             List<Session> sessions = buildSessions(events, markEvent, markType, 
-                                                 sessionIntervalSeconds, maxSteps, mode);
+                                                 sessionIntervalSeconds, maxSteps, maxGroupCount, mode);
             
             // 构建返回结果
             return buildResult(sessions);
@@ -56,9 +57,14 @@ public class SessionAgg extends UDF {
      * 构建会话列表
      */
     private List<Session> buildSessions(List<EventData> events, String markEvent, String markType,
-                                      int sessionIntervalSeconds, int maxSteps, String mode) {
+                                      int sessionIntervalSeconds, int maxSteps, int maxGroupCount, String mode) {
         List<Session> sessions = new ArrayList<>();
         Session currentSession = null;
+        
+        // 处理分组值数量控制
+        if (maxGroupCount > 0) {
+            events = processGroupCountLimit(events, maxGroupCount);
+        }
         
         for (EventData event : events) {
             // 检查是否需要开始新会话
@@ -304,5 +310,45 @@ public class SessionAgg extends UDF {
      */
     private static class Session {
         List<EventData> events = new ArrayList<>();
+    }
+    
+    /**
+     * 处理分组值数量限制，超过maxGroupCount的分组值会被合并为"其他"
+     */
+    private List<EventData> processGroupCountLimit(List<EventData> events, int maxGroupCount) {
+        // 统计每个分组值的出现次数
+        Map<String, Integer> groupCountMap = new HashMap<>();
+        for (EventData event : events) {
+            String groupKey = String.join("|", event.groups);
+            groupCountMap.put(groupKey, groupCountMap.getOrDefault(groupKey, 0) + 1);
+        }
+        
+        // 按出现次数排序，取前maxGroupCount个
+        List<Map.Entry<String, Integer>> sortedGroups = new ArrayList<>(groupCountMap.entrySet());
+        sortedGroups.sort((a, b) -> b.getValue().compareTo(a.getValue()));
+        
+        // 获取保留的分组值
+        Set<String> keepGroups = new HashSet<>();
+        for (int i = 0; i < Math.min(maxGroupCount, sortedGroups.size()); i++) {
+            keepGroups.add(sortedGroups.get(i).getKey());
+        }
+        
+        // 处理事件，将不在保留列表中的分组值替换为"其他Other"
+        List<EventData> processedEvents = new ArrayList<>();
+        for (EventData event : events) {
+            String groupKey = String.join("|", event.groups);
+            if (keepGroups.contains(groupKey)) {
+                processedEvents.add(event);
+            } else {
+                // 创建新的事件，将分组值替换为"其他Other"
+                List<String> otherGroups = new ArrayList<>();
+                for (int i = 0; i < event.groups.size(); i++) {
+                    otherGroups.add("Other");
+                }
+                processedEvents.add(new EventData(event.timestamp, event.eventName, otherGroups));
+            }
+        }
+        
+        return processedEvents;
     }
 } 

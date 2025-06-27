@@ -1,6 +1,6 @@
 -- 如果换了jar包，先删除再创建
 DROP GLOBAL FUNCTION IF EXISTS window_funnel_track(INT, INT, STRING, STRING) ;
-DROP GLOBAL FUNCTION IF EXISTS session_agg(STRING, STRING, STRING, INT, INT, STRING) ;
+DROP GLOBAL FUNCTION IF EXISTS session_agg(STRING, STRING, STRING, INT, INT, INT, STRING) ;
 
 -- 进入mysql，在mysql里面创建函数，如果用了GLOBAL就不需要进入mysql
 -- USE mysql;
@@ -14,7 +14,7 @@ CREATE GLOBAL FUNCTION window_funnel_track(INT, INT, STRING, STRING) RETURNS STR
 );
 
 -- 创建session_agg UDF
-CREATE GLOBAL FUNCTION session_agg(STRING, STRING, STRING, INT, INT, STRING) RETURNS STRING PROPERTIES (
+CREATE GLOBAL FUNCTION session_agg(STRING, STRING, STRING, INT, INT, INT, STRING) RETURNS STRING PROPERTIES (
   "file"="file:///opt/apache-doris/jdbc_drivers/doris-udf-demo.jar",
   "symbol"="org.apache.doris.udf.SessionAgg",
   "always_nullable"="true",
@@ -321,91 +321,35 @@ select '2024-01-01 00:40:00' as dt,'aki' as uid,'reg' as event,'tt' as group0,''
 union all
 select '2024-01-01 00:40:00' as dt,'aki' as uid,'reg' as event,'fb' as group0,'' as group1
 )
+--5种分析模式：default,cons_uniq,session_uniq,cons_uniq_with_group,session_uniq_with_group
 ,session_udf as (
+select 
+    path_uid,
+    session_agg(
+        'reg',
+        'start',
+        group_concat(path),
+        1800,
+        10,
+        2,
+        'session_uniq_with_group' 
+    ) as session_result
+    from (
+        select 
+            --哪些列作为分组，就塞到event后面，可以不带任何分组
+            json_array(dt,event,group0,group1)  as path,
+            uid as path_uid
+                from 
+            event_log
+    ) t1
+group by 
+    path_uid
+)
+
 select 
     e1,
     count(1) as value
-    from (
-        select * from (
-                select 
-                path_uid,
-                session_agg(
-                    'iap',           -- 标记事件名称
-                    'start',         -- 标记事件类型：start/end
-                    group_concat(path), -- 事件字符串
-                    30*60,           -- 会话间隔时长（秒）
-                    10,              -- 会话最大步数
-                    'session_uniq_with_group' --分析模式：default,cons_uniq,session_uniq,cons_uniq_with_group,session_uniq_with_group
-                ) as session_result
-                from (
-                        select 
-                            json_array(dt,event,group0,group1)  as path,
-                            uid as path_uid
-                                from 
-                            event_log
-                ) t1
-                group by 
-                path_uid
-            ) t2 lateral view EXPLODE(cast(session_result as ARRAY<varchar>)) tmp as e1
-    ) t3
-    group by e1       
-)
-
-
-
--- 分组项大于某个数量时，把长尾分组项转为其他，if 里面rank1<的值就是控制分组数量
-,sankey_dim as (
-SELECT
-    e2,
-    IF (rank1 < 2 or JSON_LENGTH(e2_json)=2
-        ,e2_json
-        ,JSON_EXTRACT(e2_json,'$.[0]','$.[1]')
-    ) AS e3
-    ,rank1
-    ,VALUE
-FROM
-    (
-    select 
-    index1
-    ,e2
-    ,JSON_PARSE(e2) as e2_json
-    ,value
-    ,row_number() over (partition by index1 order by value desc) as rank1
-    from (
-            select 
-            cast(e2 as array<int>)[1] as index1
-            ,e2
-            ,sum(value) as value 
-            from (
-                select 
-                    *    
-                from 
-                    session_udf
-                    lateral view EXPLODE(cast(e1 as ARRAY<varchar>)) tmp as e2
-            ) t group by e2
-        ) t3
-    ) t4
-) 
-
--- select * from sankey_dim
--- 把一些分组项转成其他，下面的结果留空就是转成其他了
-select
--- t1.e1,
--- t1.e2,
--- sankey_dim.e3,
--- cast(t1.e2 as array<int>)[1] as col_num,
-group_concat(sankey_dim.e3 order by t1.value,cast(t1.e2 as array<int>)[1]) as e1,
-t1.value
 from
-  (
-    select
-      *
-    from
-      session_udf lateral view EXPLODE(cast(e1 as ARRAY<varchar>)) tmp as e2
-  ) t1
-  left join sankey_dim on t1.e2 = sankey_dim.e2
-group by
-  t1.e1,
-  t1.value
-
+    session_udf lateral view EXPLODE(cast(session_result as ARRAY<varchar>)) tmp as e1    
+group by e1
 ;
