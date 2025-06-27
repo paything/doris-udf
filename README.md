@@ -1015,7 +1015,7 @@ dt,uid,event,group0,group1
    python import_to_doris.py
    ```
 
-2. **SQL测试**：
+2. **路径分析SQL测试**：
    ```sql
   --5种分析模式：default,cons_uniq,session_uniq,cons_uniq_with_group,session_uniq_with_group
   with session_udf as (
@@ -1048,7 +1048,7 @@ dt,uid,event,group0,group1
       session_udf lateral view EXPLODE(cast(session_result as ARRAY<varchar>)) tmp as e1    
   group by e1
   ```
-
+**漏斗SQL测试**：
   ```sql
    -- 在Doris中执行，漏斗分析案例
   with track_udf as (
