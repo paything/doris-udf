@@ -1017,7 +1017,6 @@ dt,uid,event,group0,group1
 
 2. **SQL测试**：
    ```sql
-   -- 在Doris中执行,路径分析案例
   --5种分析模式：default,cons_uniq,session_uniq,cons_uniq_with_group,session_uniq_with_group
   with session_udf as (
   select 
@@ -1048,7 +1047,7 @@ dt,uid,event,group0,group1
   from
       session_udf lateral view EXPLODE(cast(session_result as ARRAY<varchar>)) tmp as e1    
   group by e1
-   ```
+  ```
 
   ```sql
    -- 在Doris中执行，漏斗分析案例
