@@ -10,6 +10,11 @@ public class SessionAgg extends UDF {
     private static final SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     
     // 分析模式常量
+    //  - `default`: 默认模式，不做特殊处理，正常对事件排序后按条件返回结果
+    //  - `cons_uniq`: 连续事件去重，例如以iap事件做起始，后续连续发生的iap都不计入会话链条中，如果中间有插入其他事件，后续的iap又会被计入链条中
+    //  - `session_uniq`: 事件严格去重，对比cons_uniq的差异是，任何事件都只会计入一次会话链条中，无论中间是否有插入其他事件
+    //  - `cons_uniq_with_group`: 连续事件去重，但是加入了分组值的判断，例如group为商品id，如果连续购买同一个商品id，则只计1次，如果购买不同的商品id，则会被计入会话链条中
+    //  - `session_uniq_with_group`: 事件严格去重，但是加入了分组值的判断，例如group为商品id，不管是否连续，只要在同一个会话中出现过相同的事件名+分组组合，就不会再计入会话链条中
     private static final String MODE_DEFAULT = "default";
     private static final String MODE_CONS_UNIQ = "cons_uniq";
     private static final String MODE_SESSION_UNIQ = "session_uniq";
@@ -23,12 +28,14 @@ public class SessionAgg extends UDF {
      * @param eventString 事件字符串，格式：["时间戳","事件名","group0","group1"],...
      * @param sessionIntervalSeconds 会话间隔时长（秒）
      * @param maxSteps 会话最大步数
-     * @param maxGroupCount 分组值最大数量，超过此数量的分组值会被合并为"其他"
+     * @param maxGroupCount 分组值最大数量，超过此数量的分组值会被合并为replaceValue
+     * @param replaceValue 分组值超过限制时的替换值
      * @param mode 分析模式
      * @return 会话聚合结果
      */
     public String evaluate(String markEvent, String markType, String eventString, 
-                          Integer sessionIntervalSeconds, Integer maxSteps, Integer maxGroupCount, String mode) {
+                          Integer sessionIntervalSeconds, Integer maxSteps, Integer maxGroupCount, 
+                          String replaceValue, String mode) {
         if (eventString == null || eventString.isEmpty()) {
             return null;
         }
@@ -42,7 +49,7 @@ public class SessionAgg extends UDF {
             
             // 根据标记类型处理事件
             List<Session> sessions = buildSessions(events, markEvent, markType, 
-                                                 sessionIntervalSeconds, maxSteps, maxGroupCount, mode);
+                                                 sessionIntervalSeconds, maxSteps, maxGroupCount, replaceValue, mode);
             
             // 构建返回结果
             return buildResult(sessions);
@@ -57,13 +64,13 @@ public class SessionAgg extends UDF {
      * 构建会话列表
      */
     private List<Session> buildSessions(List<EventData> events, String markEvent, String markType,
-                                      int sessionIntervalSeconds, int maxSteps, int maxGroupCount, String mode) {
+                                      int sessionIntervalSeconds, int maxSteps, int maxGroupCount, String replaceValue, String mode) {
         List<Session> sessions = new ArrayList<>();
         Session currentSession = null;
         
         // 处理分组值数量控制
         if (maxGroupCount > 0) {
-            events = processGroupCountLimit(events, maxGroupCount);
+            events = processGroupCountLimit(events, maxGroupCount, replaceValue);
         }
         
         for (EventData event : events) {
@@ -313,9 +320,9 @@ public class SessionAgg extends UDF {
     }
     
     /**
-     * 处理分组值数量限制，超过maxGroupCount的分组值会被合并为"其他"
+     * 处理分组值数量限制，超过maxGroupCount的分组值会被合并为replaceValue
      */
-    private List<EventData> processGroupCountLimit(List<EventData> events, int maxGroupCount) {
+    private List<EventData> processGroupCountLimit(List<EventData> events, int maxGroupCount, String replaceValue) {
         // 统计每个分组值的出现次数
         Map<String, Integer> groupCountMap = new HashMap<>();
         for (EventData event : events) {
@@ -333,17 +340,17 @@ public class SessionAgg extends UDF {
             keepGroups.add(sortedGroups.get(i).getKey());
         }
         
-        // 处理事件，将不在保留列表中的分组值替换为"其他Other"
+        // 处理事件，将不在保留列表中的分组值替换为replaceValue
         List<EventData> processedEvents = new ArrayList<>();
         for (EventData event : events) {
             String groupKey = String.join("|", event.groups);
             if (keepGroups.contains(groupKey)) {
                 processedEvents.add(event);
             } else {
-                // 创建新的事件，将分组值替换为"其他Other"
+                // 创建新的事件，将分组值替换为replaceValue
                 List<String> otherGroups = new ArrayList<>();
                 for (int i = 0; i < event.groups.size(); i++) {
-                    otherGroups.add("Other");
+                    otherGroups.add(replaceValue);
                 }
                 processedEvents.add(new EventData(event.timestamp, event.eventName, otherGroups));
             }

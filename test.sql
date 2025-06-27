@@ -1,6 +1,6 @@
 -- 如果换了jar包，先删除再创建
 DROP GLOBAL FUNCTION IF EXISTS window_funnel_track(INT, INT, STRING, STRING) ;
-DROP GLOBAL FUNCTION IF EXISTS session_agg(STRING, STRING, STRING, INT, INT, INT, STRING) ;
+DROP GLOBAL FUNCTION IF EXISTS session_agg(STRING, STRING, STRING, INT, INT, INT, STRING, STRING) ;
 
 -- 进入mysql，在mysql里面创建函数，如果用了GLOBAL就不需要进入mysql
 -- USE mysql;
@@ -14,7 +14,7 @@ CREATE GLOBAL FUNCTION window_funnel_track(INT, INT, STRING, STRING) RETURNS STR
 );
 
 -- 创建session_agg UDF
-CREATE GLOBAL FUNCTION session_agg(STRING, STRING, STRING, INT, INT, INT, STRING) RETURNS STRING PROPERTIES (
+CREATE GLOBAL FUNCTION session_agg(STRING, STRING, STRING, INT, INT, INT, STRING, STRING) RETURNS STRING PROPERTIES (
   "file"="file:///opt/apache-doris/jdbc_drivers/doris-udf-demo.jar",
   "symbol"="org.apache.doris.udf.SessionAgg",
   "always_nullable"="true",
@@ -332,6 +332,7 @@ select
         1800,
         10,
         2,
+        'replace_value',
         'session_uniq_with_group' 
     ) as session_result
     from (

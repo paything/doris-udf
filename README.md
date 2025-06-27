@@ -83,7 +83,7 @@ PROPERTIES (
 
 #### SessionAgg UDF
 ```sql
-CREATE GLOBAL FUNCTION user_session_agg(STRING, STRING, STRING, INT, INT, STRING) 
+CREATE GLOBAL FUNCTION user_session_agg(STRING, STRING, STRING, INT, INT, INT, STRING, STRING) 
 RETURNS STRING 
 PROPERTIES (
     "file"="file:///opt/apache-doris/jdbc_drivers/doris-udf-demo.jar",
@@ -177,6 +177,7 @@ select '2024-02-01 00:00:02.434' as dt,'payne' as uid,'chat' as event,'fb' as gr
             30*60,           -- 会话间隔时长（秒）
             10,              -- 会话最大步数
             1,              -- 分组值最大数量
+            '其他',          -- 分组值超过限制时的替换值
             'default'        -- 分析模式
         ) as session_result
     FROM (
@@ -217,6 +218,7 @@ user_session_agg(
     会话间隔时长秒,
     会话最大步数,
     分组值最大数量,
+    分组值超过限制时的替换值,
     分析模式
 )
 ```
@@ -231,6 +233,7 @@ user_session_agg(
 - **会话间隔时长秒** (INT): 会话内事件的最大时间间隔，超过此间隔将开始新会话
 - **会话最大步数** (INT): 单个会话的最大事件步数限制
 - **分组值最大数量** (INT): 限制分组维度的数量，按触发的用户路径数降序
+- **分组值超过限制时的替换值** (STRING): 当分组值数量超过maxGroupCount时，超出的分组值会被替换为此值
 - **分析模式** (STRING): 分析模式，支持以下五种模式：
   - `default`: 默认模式，不做特殊处理，正常对事件排序后按条件返回结果
   - `cons_uniq`: 连续事件去重，例如以iap事件做起始，后续连续发生的iap都不计入会话链条中，如果中间有插入其他事件，后续的iap又会被计入链条中
@@ -474,11 +477,11 @@ excuting test.sql ...
 | e1                                                                                                                                | value |  
 +-----------------------------------------------------------------------------------------------------------------------------------+-------+  
 | [[1,"reg","tiktok#1","cn"],[2,"iap","tiktok#1","cn"],[3,"chat","tiktok#1","cn"]]                                                  |     1 |  
-| [[1,"reg","fb@,#2","cn"],[2,"iap","fb@,#2","cn"],[3,"chat","Other","Other"]]                                                      |     1 |  
-| [[1,"reg","f@#,b","cn"],[2,"iap","Other","Other"],[3,"chat","fb","cn"]]                                                           |     1 |  
+| [[1,"reg","fb@,#2","cn"],[2,"iap","fb@,#2","cn"],[3,"chat","replace_value","replace_value"]]                                      |     1 |  
+| [[1,"reg","f@#,b","cn"],[2,"iap","replace_value","replace_value"],[3,"chat","fb","cn"]]                                           |     1 |
 | [[1,"reg","f@#,b","cn"],[2,"iap","f@#,b","cn"]]                                                                                   |     1 |  
 | [[1,"reg","fb",""],[2,"event_1","tt",""],[3,"event_1.1","tt",""],[4,"event_1.1","fb",""],[5,"reg","tt",""],[6,"event_2","fb",""]] |     1 |  
-+-----------------------------------------------------------------------------------------------------------------------------------+-------+
++-----------------------------------------------------------------------------------------------------------------------------------+-------+ 
 请按任意键继续. . .
 ```
 

@@ -13,7 +13,7 @@ public class SessionAggTest {
         System.out.println("最大步数: 10");
         System.out.println("分组值最大数量: 10");
         System.out.println("分析模式: default");
-        String result1 = sessionAgg.evaluate("iap", "start", input1, 1800, 10, 10, "default");
+        String result1 = sessionAgg.evaluate("iap", "start", input1, 1800, 10, 10, "其他", "default");
         System.out.println("输出结果: " + result1);
         System.out.println();
         
@@ -25,8 +25,9 @@ public class SessionAggTest {
         System.out.println("会话间隔: 1800秒");
         System.out.println("最大步数: 10");
         System.out.println("分组值最大数量: 10");
+        System.out.println("替换值: 其他");
         System.out.println("分析模式: cons_uniq");
-        String result2 = sessionAgg.evaluate("iap", "start", input2, 1800, 10, 10, "cons_uniq");
+        String result2 = sessionAgg.evaluate("iap", "start", input2, 1800, 10, 10, "其他", "cons_uniq");
         System.out.println("输出结果: " + result2);
         System.out.println();
         
@@ -38,8 +39,9 @@ public class SessionAggTest {
         System.out.println("会话间隔: 1800秒");
         System.out.println("最大步数: 10");
         System.out.println("分组值最大数量: 10");
+        System.out.println("替换值: 其他");
         System.out.println("分析模式: session_uniq");
-        String result3 = sessionAgg.evaluate("iap", "start", input3, 1800, 10, 10, "session_uniq");
+        String result3 = sessionAgg.evaluate("iap", "start", input3, 1800, 10, 10, "其他", "session_uniq");
         System.out.println("输出结果: " + result3);
         System.out.println();
         
@@ -51,8 +53,9 @@ public class SessionAggTest {
         System.out.println("会话间隔: 1800秒");
         System.out.println("最大步数: 10");
         System.out.println("分组值最大数量: 10");
+        System.out.println("替换值: 其他");
         System.out.println("分析模式: cons_uniq_with_group");
-        String result4 = sessionAgg.evaluate("iap", "start", input4, 1800, 10, 10, "cons_uniq_with_group");
+        String result4 = sessionAgg.evaluate("iap", "start", input4, 1800, 10, 10, "其他", "cons_uniq_with_group");
         System.out.println("输出结果: " + result4);
         System.out.println();
         
@@ -64,8 +67,9 @@ public class SessionAggTest {
         System.out.println("会话间隔: 1800秒");
         System.out.println("最大步数: 10");
         System.out.println("分组值最大数量: 10");
+        System.out.println("替换值: 其他");
         System.out.println("分析模式: session_uniq_with_group");
-        String result5 = sessionAgg.evaluate("iap", "start", input5, 1800, 10, 10, "session_uniq_with_group");
+        String result5 = sessionAgg.evaluate("iap", "start", input5, 1800, 10, 10, "其他", "session_uniq_with_group");
         System.out.println("输出结果: " + result5);
         System.out.println();
         
@@ -77,8 +81,9 @@ public class SessionAggTest {
         System.out.println("会话间隔: 1800秒");
         System.out.println("最大步数: 10");
         System.out.println("分组值最大数量: 10");
+        System.out.println("替换值: 其他");
         System.out.println("分析模式: default");
-        String result6 = sessionAgg.evaluate("logout", "end", input6, 1800, 10, 10, "default");
+        String result6 = sessionAgg.evaluate("logout", "end", input6, 1800, 10, 10, "其他", "default");
         System.out.println("输出结果: " + result6);
         System.out.println();
         
@@ -90,8 +95,9 @@ public class SessionAggTest {
         System.out.println("会话间隔: 1800秒");
         System.out.println("最大步数: 10");
         System.out.println("分组值最大数量: 10");
+        System.out.println("替换值: 其他");
         System.out.println("分析模式: default");
-        String result7 = sessionAgg.evaluate("iap", "start", input7, 1800, 10, 10, "default");
+        String result7 = sessionAgg.evaluate("iap", "start", input7, 1800, 10, 10, "其他", "default");
         System.out.println("输出结果: " + result7);
         System.out.println();
         
@@ -103,8 +109,9 @@ public class SessionAggTest {
         System.out.println("会话间隔: 1800秒");
         System.out.println("最大步数: 3");
         System.out.println("分组值最大数量: 10");
+        System.out.println("替换值: 其他");
         System.out.println("分析模式: default");
-        String result8 = sessionAgg.evaluate("iap", "start", input8, 1800, 3, 10, "default");
+        String result8 = sessionAgg.evaluate("iap", "start", input8, 1800, 3, 10, "其他", "default");
         System.out.println("输出结果: " + result8);
         System.out.println();
         
@@ -116,8 +123,9 @@ public class SessionAggTest {
         System.out.println("会话间隔: 1800秒");
         System.out.println("最大步数: 10");
         System.out.println("分组值最大数量: 10");
+        System.out.println("替换值: 其他");
         System.out.println("分析模式: default");
-        String result9 = sessionAgg.evaluate("iap", "start", input9, 1800, 10, 10, "default");
+        String result9 = sessionAgg.evaluate("iap", "start", input9, 1800, 10, 10, "其他", "default");
         System.out.println("输出结果: " + result9);
         System.out.println();
         
@@ -129,8 +137,9 @@ public class SessionAggTest {
         System.out.println("会话间隔: 1800秒");
         System.out.println("最大步数: 10");
         System.out.println("分组值最大数量: 10");
+        System.out.println("替换值: 其他");
         System.out.println("分析模式: default");
-        String result10 = sessionAgg.evaluate("iap", "start", input10, 1800, 10, 10, "default");
+        String result10 = sessionAgg.evaluate("iap", "start", input10, 1800, 10, 10, "其他", "default");
         System.out.println("输出结果: " + result10);
         System.out.println();
 
@@ -142,8 +151,9 @@ public class SessionAggTest {
         System.out.println("会话间隔: 1800秒");
         System.out.println("最大步数: 10");
         System.out.println("分组值最大数量: 10");
+        System.out.println("替换值: 其他");
         System.out.println("分析模式: default");
-        String result11 = sessionAgg.evaluate("iap", "start", input11, 1800, 10, 10, "default");
+        String result11 = sessionAgg.evaluate("iap", "start", input11, 1800, 10, 10, "其他", "default");
         System.out.println("输出结果: " + result11);
         System.out.println();
 
@@ -155,8 +165,9 @@ public class SessionAggTest {
         System.out.println("会话间隔: 1800秒");
         System.out.println("最大步数: 10");
         System.out.println("分组值最大数量: 10");
+        System.out.println("替换值: 其他");
         System.out.println("分析模式: default");
-        String result12 = sessionAgg.evaluate("iap", "start", input12, 1800, 10, 10, "default");
+        String result12 = sessionAgg.evaluate("iap", "start", input12, 1800, 10, 10, "其他", "default");
         System.out.println("输出结果: " + result12);
         System.out.println();
         
@@ -168,8 +179,9 @@ public class SessionAggTest {
         System.out.println("会话间隔: 1800秒");
         System.out.println("最大步数: 10");
         System.out.println("分组值最大数量: 10");
+        System.out.println("替换值: 其他");
         System.out.println("分析模式: default");
-        String result13 = sessionAgg.evaluate("iap", "start", input13, 1800, 10, 10, "default");
+        String result13 = sessionAgg.evaluate("iap", "start", input13, 1800, 10, 10, "其他", "default");
         System.out.println("输出结果: " + result13);
         System.out.println();
 
@@ -181,8 +193,9 @@ public class SessionAggTest {
         System.out.println("会话间隔: 1800秒");
         System.out.println("最大步数: 10");
         System.out.println("分组值最大数量: 10");
+        System.out.println("替换值: 其他");
         System.out.println("分析模式: session_uniq_with_group");
-        String result14 = sessionAgg.evaluate("iap", "start", input14, 1800, 10, 10, "session_uniq_with_group");
+        String result14 = sessionAgg.evaluate("iap", "start", input14, 1800, 10, 10, "其他", "session_uniq_with_group");
         System.out.println("输出结果: " + result14);
         System.out.println("说明: 第三个iap(product1,cn)应该被去重，因为第一个iap(product1,cn)已经在会话中了");
         System.out.println();
@@ -196,14 +209,14 @@ public class SessionAggTest {
         // 测试0个分组字段（会失败）
         String input15_0 = "[\"2024-01-01 00:00:00.000\",\"iap\"],[\"2024-01-01 00:00:01.000\",\"chat\"]";
         System.out.println("测试0个分组字段: " + input15_0);
-        String result15_0 = sessionAgg.evaluate("iap", "start", input15_0, 1800, 10, 10, "default");
+        String result15_0 = sessionAgg.evaluate("iap", "start", input15_0, 1800, 10, 10, "其他", "default");
         System.out.println("结果: " + result15_0);
         System.out.println();
         
         // 测试3个分组字段（会丢失第3个字段）
         String input15_3 = "[\"2024-01-01 00:00:00.000\",\"iap\",\"product1\",\"cn\",\"region1\"],[\"2024-01-01 00:00:01.000\",\"chat\",\"product1\",\"cn\",\"region1\"]";
         System.out.println("测试3个分组字段: " + input15_3);
-        String result15_3 = sessionAgg.evaluate("iap", "start", input15_3, 1800, 10, 10, "default");
+        String result15_3 = sessionAgg.evaluate("iap", "start", input15_3, 1800, 10, 10, "其他", "default");
         System.out.println("结果: " + result15_3);
         System.out.println("注意：第3个分组字段'region1'被丢失了");
         System.out.println();
@@ -215,21 +228,21 @@ public class SessionAggTest {
         // 测试1个分组字段
         String input16_1 = "[\"2024-01-01 00:00:00.000\",\"iap\",\"product1\"],[\"2024-01-01 00:00:01.000\",\"chat\",\"product1\"]";
         System.out.println("测试1个分组字段: " + input16_1);
-        String result16_1 = sessionAgg.evaluate("iap", "start", input16_1, 1800, 10, 10, "default");
+        String result16_1 = sessionAgg.evaluate("iap", "start", input16_1, 1800, 10, 10, "其他", "default");
         System.out.println("结果: " + result16_1);
         System.out.println();
         
         // 测试4个分组字段
         String input16_4 = "[\"2024-01-01 00:00:00.000\",\"iap\",\"product1\",\"cn\",\"region1\",\"version1\"],[\"2024-01-01 00:00:01.000\",\"chat\",\"product1\",\"cn\",\"region1\",\"version1\"]";
         System.out.println("测试4个分组字段: " + input16_4);
-        String result16_4 = sessionAgg.evaluate("iap", "start", input16_4, 1800, 10, 10, "default");
+        String result16_4 = sessionAgg.evaluate("iap", "start", input16_4, 1800, 10, 10, "其他", "default");
         System.out.println("结果: " + result16_4);
         System.out.println();
         
         // 测试5个分组字段
         String input16_5 = "[\"2024-01-01 00:00:00.000\",\"iap\",\"product1\",\"cn\",\"region1\",\"version1\",\"channel1\"],[\"2024-01-01 00:00:01.000\",\"chat\",\"product1\",\"cn\",\"region1\",\"version1\",\"channel1\"]";
         System.out.println("测试5个分组字段: " + input16_5);
-        String result16_5 = sessionAgg.evaluate("iap", "start", input16_5, 1800, 10, 10, "default");
+        String result16_5 = sessionAgg.evaluate("iap", "start", input16_5, 1800, 10, 10, "其他", "default");
         System.out.println("结果: " + result16_5);
         System.out.println();
         
@@ -237,7 +250,7 @@ public class SessionAggTest {
         System.out.println("=== 测试17：多分组字段的去重模式验证 ===");
         String input17 = "[\"2024-01-01 00:00:00.000\",\"iap\",\"product1\",\"cn\",\"region1\"],[\"2024-01-01 00:00:01.000\",\"chat\",\"product1\",\"cn\",\"region1\"],[\"2024-01-01 00:00:02.000\",\"iap\",\"product2\",\"cn\",\"region1\"],[\"2024-01-01 00:00:03.000\",\"iap\",\"product1\",\"cn\",\"region1\"]";
         System.out.println("测试session_uniq_with_group模式（3个分组字段）: " + input17);
-        String result17 = sessionAgg.evaluate("iap", "start", input17, 1800, 10, 10, "session_uniq_with_group");
+        String result17 = sessionAgg.evaluate("iap", "start", input17, 1800, 10, 10, "其他", "session_uniq_with_group");
         System.out.println("结果: " + result17);
         System.out.println("说明: 第四个iap(product1,cn,region1)应该被去重，因为第一个iap(product1,cn,region1)已经在会话中了");
         System.out.println();
@@ -246,8 +259,16 @@ public class SessionAggTest {
         String input18 = "[\"2024-01-01 00:00:00.000\",\"iap\",\"product1\",\"cn\"],[\"2024-01-01 00:00:01.000\",\"chat\",\"product1\",\"cn\"],[\"2024-01-01 00:00:02.000\",\"iap\",\"product2\",\"cn\"],[\"2024-01-01 00:00:03.000\",\"chat\",\"product2\",\"cn\"],[\"2024-01-01 00:00:04.000\",\"iap\",\"product3\",\"cn\"],[\"2024-01-01 00:00:05.000\",\"chat\",\"product3\",\"cn\"],[\"2024-01-01 00:00:06.000\",\"iap\",\"product4\",\"cn\"],[\"2024-01-01 00:00:07.000\",\"chat\",\"product4\",\"cn\"]";
         System.out.println("测试分组值数量控制（限制为2个）: " + input18);
         System.out.println("说明: 有4个不同的product，限制为2个时，出现次数最少的product3和product4应该被合并为'其他'");
-        String result18 = sessionAgg.evaluate("iap", "start", input18, 1800, 10, 2, "default");
+        String result18 = sessionAgg.evaluate("iap", "start", input18, 1800, 10, 2, "其他", "default");
         System.out.println("结果: " + result18);
+        System.out.println();
+
+        System.out.println("=== 测试19：自定义替换值功能验证 ===");
+        String input19 = "[\"2024-01-01 00:00:00.000\",\"iap\",\"product1\",\"cn\"],[\"2024-01-01 00:00:01.000\",\"chat\",\"product1\",\"cn\"],[\"2024-01-01 00:00:02.000\",\"iap\",\"product2\",\"cn\"],[\"2024-01-01 00:00:03.000\",\"chat\",\"product2\",\"cn\"],[\"2024-01-01 00:00:04.000\",\"iap\",\"product3\",\"cn\"],[\"2024-01-01 00:00:05.000\",\"chat\",\"product3\",\"cn\"]";
+        System.out.println("测试自定义替换值（限制为2个，替换为'长尾'）: " + input19);
+        System.out.println("说明: 有3个不同的product，限制为2个时，出现次数最少的product3应该被合并为'长尾'");
+        String result19 = sessionAgg.evaluate("iap", "start", input19, 1800, 10, 2, "长尾", "default");
+        System.out.println("结果: " + result19);
         System.out.println();
     }
 } 
