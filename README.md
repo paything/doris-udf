@@ -426,8 +426,45 @@ user_session_agg(
 
 2. **路径分析SQL测试**：
    ```sql
+    with event_log as (
+    select '2024-01-01 00:00:00.123' as dt,'payne' as uid,'reg' as event,'tiktok#1' as group0,'cn' as group1
+    union all
+    select '2024-01-01 00:00:01.345' as dt,'payne' as uid,'iap' as event,'tiktok#1' as group0,'cn' as group1
+    union all
+    select '2024-01-01 00:00:03.111' as dt,'payne' as uid,'chat' as event,'tiktok#1' as group0,'cn' as group1
+    union all
+    select '2024-02-01 00:00:00.012' as dt,'payne' as uid,'reg' as event,'fb@,#2' as group0,'cn' as group1
+    union all
+    select '2024-02-01 00:00:01.001' as dt,'payne' as uid,'iap' as event,'fb@,#2' as group0,'cn' as group1
+    union all
+    select '2024-02-01 00:00:02.434' as dt,'payne' as uid,'chat' as event,'fb' as group0,'cn' as group1
+    union all
+    select '2024-01-01 00:00:00.012' as dt,'cjt' as uid,'reg' as event,'f@#,b' as group0,'cn' as group1
+    union all
+    select '2024-01-01 00:00:01.001' as dt,'cjt' as uid,'iap' as event,'f@#,@#,b' as group0,'cn' as group1
+    union all
+    select '2024-01-01 00:00:02.434' as dt,'cjt' as uid,'chat' as event,'fb' as group0,'cn' as group1
+    union all
+    select '2024-01-02 00:00:00.012' as dt,'cjt' as uid,'reg' as event,'f@#,b' as group0,'cn' as group1
+    union all
+    select '2024-01-02 00:00:03.012' as dt,'cjt' as uid,'iap' as event,'f@#,b' as group0,'cn' as group1
+    union all
+    select '2024-01-01 00:00:00' as dt,'aki' as uid,'reg' as event,'fb' as group0,'' as group1
+    union all
+    select '2024-01-01 00:30:00' as dt,'aki' as uid,'event_1' as event,'tt' as group0,'' as group1
+    union all
+    select '2024-01-01 00:59:00' as dt,'aki' as uid,'event_2' as event,'fb' as group0,'' as group1
+    union all
+    select '2024-01-01 00:40:00' as dt,'aki' as uid,'event_1.1' as event,'tt' as group0,'' as group1
+    union all
+    select '2024-01-01 00:40:00' as dt,'aki' as uid,'event_1.1' as event,'fb' as group0,'' as group1
+    union all
+    select '2024-01-01 00:40:00' as dt,'aki' as uid,'reg' as event,'tt' as group0,'' as group1
+    union all
+    select '2024-01-01 00:40:00' as dt,'aki' as uid,'reg' as event,'fb' as group0,'' as group1
+    )
    -- 5种分析模式：default,cons_uniq,session_uniq,cons_uniq_with_group,session_uniq_with_group
-   with session_udf as (
+    ,session_udf as (
        select 
            path_uid,
            session_agg(
@@ -460,7 +497,30 @@ user_session_agg(
 3. **漏斗分析SQL测试**：
    ```sql
    -- 在Doris中执行，漏斗分析案例
-   with track_udf as (
+   with event_log as (
+    select '2024-01-01 00:00:00.123' as dt,'payne' as uid,'reg' as event,'tiktok#1' as group0
+    union all
+    select '2024-01-01 00:00:01.345' as dt,'payne' as uid,'iap' as event,'tiktok#1' as group0
+    union all
+    select '2024-01-01 00:00:03.111' as dt,'payne' as uid,'chat' as event,'tiktok#1' as group0
+    union all
+    select '2024-02-01 00:00:00.012' as dt,'payne' as uid,'reg' as event,'fb@,#2' as group0
+    union all
+    select '2024-02-01 00:00:01.001' as dt,'payne' as uid,'iap' as event,'fb@,#2' as group0
+    union all
+    select '2024-02-01 00:00:02.434' as dt,'payne' as uid,'chat' as event,'fb' as group0
+    union all
+    select '2024-01-01 00:00:00.012' as dt,'cjt' as uid,'reg' as event,'f@#,b' as group0
+    union all
+    select '2024-01-01 00:00:01.001' as dt,'cjt' as uid,'iap' as event,'f@#,@#,b' as group0
+    union all
+    select '2024-01-01 00:00:02.434' as dt,'cjt' as uid,'chat' as event,'fb' as group0
+    union all
+    select '2024-01-02 00:00:00.012' as dt,'cjt' as uid,'reg' as event,'f@#,b' as group0
+    union all
+    select '2024-01-02 00:00:03.012' as dt,'cjt' as uid,'iap' as event,'f@#,b' as group0
+    )
+   ,track_udf as (
        SELECT 
            uid,
            group0 as link_col, -- 关联属性列，不需要就去掉
