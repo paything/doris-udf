@@ -92,6 +92,7 @@ doris-udf/
 ├── build-jar.bat                       # JAR打包脚本
 ├── jar2doris.bat                       # JAR包部署到Doris容器脚本
 ├── run-test.bat                        # Windows下一键执行SQL测试脚本
+├── start-server-and-vue.bat            # 一键启动前后端服务脚本
 ├── doris-udf-demo.jar                  # 编译生成的JAR包
 ├── .specstory/                         # SpecStory扩展目录，保存AI对话历史
 │   ├── .what-is-this.md                # SpecStory说明文档
@@ -156,7 +157,32 @@ npm run dev       # 启动Vue.js开发服务器（默认端口5173）
 - 提供漏斗图、箱型图、桑基图等多种图表展示
 - 支持侧边栏折叠，优化显示空间
 
-### 5. 在Doris中注册UDF
+### 5. 一键启动脚本（推荐）
+
+项目提供了 `start-server-and-vue.bat` 批处理脚本，可以同时启动Python后端和Vue前端服务：
+
+```bash
+start-server-and-vue.bat  # 一键启动前后端服务
+```
+
+**脚本功能**：
+- 自动启动Python后端API服务（端口5012）
+- 等待2秒让后端服务完全启动
+- 自动启动Vue前端开发服务器（端口5173）
+- 显示服务地址和状态信息
+
+**使用说明**：
+1. 双击运行 `start-server-and-vue.bat`
+2. 等待两个服务启动完成
+3. 访问 `http://localhost:5173` 使用前端应用
+
+**注意事项**：
+- 确保已安装Python和Node.js环境
+- 确保已安装前端依赖包（在vue-sql-query目录执行 `npm install`）
+- 脚本会自动处理服务启动顺序和依赖关系
+- 如果端口被占用，请先关闭占用端口的程序
+
+### 6. 在Doris中注册UDF
 
 #### WindowFunnel UDF
 ```sql
@@ -1541,6 +1567,14 @@ jar2doris.bat
 ```
 
 ### 4. 启动服务
+
+**方式一：一键启动（推荐）**
+```bash
+# 使用一键启动脚本，同时启动前后端服务
+start-server-and-vue.bat
+```
+
+**方式二：分别启动**
 ```bash
 # 启动后端API服务
 python app.py
@@ -1586,6 +1620,9 @@ PROPERTIES (
 - **查询失败**：检查Doris连接和UDF函数是否注册成功
 - **图表不显示**：检查浏览器控制台是否有JavaScript错误
 - **数据为空**：确认Doris中是否有测试数据
+- **启动脚本失败**：确保已安装Python和Node.js环境，前端依赖包已安装
+- **端口被占用**：如果5012或5173端口被占用，请先关闭占用端口的程序
+- **服务启动顺序问题**：使用一键启动脚本会自动处理启动顺序和依赖关系
 
 ## 技术架构
 
