@@ -5,7 +5,7 @@
 - **SessionAgg**: 专门用于用户会话聚合，根据标记事件和会话规则聚合用户行为序列
 
 该项目Java代码部分由Ai创建，SHOW YOU MY TALK: .specstory/history
-https://share.specstory.com/stories/b773244c-459e-4d77-9cb6-57086131430a
+https://share.specstory.com/stories/580c0f47-01e1-4bf9-826d-3648b2558cad
 SQL部分还是手动写
 
 ## 功能特性
