@@ -126,7 +126,7 @@ with track_udf as (
             group_concat(_event_string)
         ) as funnel_result
     FROM (
-        select 
+    select 
             *,
             concat(dt,'#'
             ,event='reg'
@@ -150,8 +150,8 @@ select * from (
     ,step_count
     ,max(step_count) over(partition by uid,funnel_result) as funnel_track_max_step
     ,row_number() over(partition by uid,group0 order by funnel_path) as path_rank
-    from (     
-        select 
+ from (
+select
             uid
             --,link_col
             ,funnel_result
@@ -428,8 +428,8 @@ function transformSankeyData(data) {
         { source: '首课新单', target: '复购忠诚', value: 499999 },
         { source: '副购忠诚', target: '高潜用户', value: 599999 }
       ]
-    };
-  } else {
+      };
+    } else {
     sankeyChartData.value = { nodes, links };
   }
   
@@ -700,8 +700,8 @@ function renderBoxChart() {
         y5: item.max,
         avg: item.avg,
         group: item.group0
-      });
-    } else {
+        });
+      } else {
       // Total汇总数据
       boxData.push({
         x: item.step,
@@ -812,7 +812,7 @@ function renderBoxChartAsBar() {
   
   try {
     const vchart = new VChart(spec, { dom: 'box-chart' });
-    vchart.renderSync();
+  vchart.renderSync();
   } catch (error) {
     console.error('柱状图渲染失败:', error);
     container.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">图表渲染失败</div>';
@@ -880,7 +880,7 @@ function renderSankeyChart() {
     },
     label: {
       visible: false,
-      style: {
+    style: {
         fontSize: 10
       }
     },
@@ -924,7 +924,7 @@ function renderSankeyChart() {
         type: 'text',
         dataId: 'sankeyNodes',
         dataKey: 'name',
-        visible: true,
+      visible: true,
         state: {
           hover: {
             fill: '#1664FF'
@@ -1354,7 +1354,7 @@ function testChartTypes() {
         <div id="table1" class="table-container"></div>
         <div id="funnel-chart" class="chart-container"></div>
         <div id="box-chart" class="chart-container"></div>
-      </div>
+          </div>
       
       <!-- 会话聚合结果 -->
       <div class="result-block">
@@ -1413,7 +1413,7 @@ function testChartTypes() {
 }
 
 .param-row {
-  display: flex;
+    display: flex;
   flex-direction: column;
   gap: 16px;
 }
@@ -1469,7 +1469,7 @@ function testChartTypes() {
 }
 
 .form-row {
-  display: flex;
+    display: flex;
   align-items: center;
   margin-bottom: 8px;
 }

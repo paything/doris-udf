@@ -56,10 +56,13 @@ public class WindowFunnel extends UDF {
             // 如果没有找到任何路径
             if (allPaths.isEmpty()) return "[]";
             
+            // 去重：移除重复的路径（基于事件UUID）
+            List<FunnelPath> uniquePaths = removeDuplicatePaths(allPaths);
+            
             // 构建结果数组
             StringBuilder sb = new StringBuilder("[");
-            for (int i = 0; i < allPaths.size(); i++) {
-                FunnelPath path = allPaths.get(i);
+            for (int i = 0; i < uniquePaths.size(); i++) {
+                FunnelPath path = uniquePaths.get(i);
                 
                 sb.append("[");
                 sb.append(path.firstTimestamp);
@@ -78,7 +81,7 @@ public class WindowFunnel extends UDF {
                 sb.append("]");
                 
                 sb.append("]");
-                if (i < allPaths.size() - 1) sb.append(",");
+                if (i < uniquePaths.size() - 1) sb.append(",");
             }
             sb.append("]");
             return sb.toString();
@@ -90,44 +93,107 @@ public class WindowFunnel extends UDF {
     }
     
     /**
+     * 移除重复的路径（基于事件UUID）
+     */
+    private List<FunnelPath> removeDuplicatePaths(List<FunnelPath> paths) {
+        // 按路径长度降序排序，优先选择长路径
+        paths.sort((p1, p2) -> Integer.compare(p2.stepCount, p1.stepCount));
+        
+        List<FunnelPath> uniquePaths = new ArrayList<>();
+        Set<String> usedEventIds = new HashSet<>();
+        int maxStep = paths.isEmpty() ? 0 : paths.get(0).stepCount;
+        
+        for (FunnelPath path : paths) {
+            // 检查路径中的事件是否已被使用
+            boolean canUse = true;
+            for (String eventId : path.eventIds) {
+                if (usedEventIds.contains(eventId)) {
+                    canUse = false;
+                    break;
+                }
+            }
+            
+            if (canUse && path.stepCount == maxStep) {
+                // 标记路径中的事件为已使用
+                usedEventIds.addAll(path.eventIds);
+                uniquePaths.add(path);
+            }
+        }
+        
+        return uniquePaths;
+    }
+    
+    /**
      * 从指定起始点构建漏斗路径
      */
     private FunnelPath buildPath(List<EventRow> events, int startIndex, int windowSeconds, int stepIntervalSeconds, int stepCount, String mode) {
         FunnelPath path = new FunnelPath();
         Long[] stepTimestamps = new Long[stepCount];
         String[] stepTags = new String[stepCount];
+        String[] stepEventIds = new String[stepCount];
         
         // 设置第一个步骤
         EventRow startEvent = events.get(startIndex);
         stepTimestamps[0] = startEvent.timestamp;
         stepTags[0] = startEvent.group;
+        stepEventIds[0] = startEvent.eventId;
         
         // 对于backtrack模式，需要特殊处理
         if (MODE_BACKTRACK.equals(mode) || MODE_BACKTRACK_LONG.equals(mode)) {
-            return buildBacktrackPath(events, startIndex, windowSeconds, stepIntervalSeconds, stepCount, mode, stepTimestamps, stepTags);
+            return buildBacktrackPath(events, startIndex, windowSeconds, stepIntervalSeconds, stepCount, mode, stepTimestamps, stepTags, stepEventIds);
         }
         
-        // 查找后续步骤
-        for (int eventIndex = startIndex + 1; eventIndex < events.size(); eventIndex++) {
-            EventRow event = events.get(eventIndex);
+        // 查找后续步骤 - 修改逻辑确保每个事件只分配给一个步骤
+        for (int stepIndex = 1; stepIndex < stepCount; stepIndex++) {
+            // 为当前步骤找到最佳匹配的事件
+            Long bestTimestamp = null;
+            String bestTag = null;
+            String bestEventId = null;
+            int bestEventIndex = -1;
             
-            // 检查是否在时间窗口内
-            if (event.timestamp - stepTimestamps[0] > windowSeconds * 1000L) {
-                break;
-            }
-            
-            // 检查每个步骤
-            for (int stepIndex = 1; stepIndex < stepCount; stepIndex++) {
-                if (stepTimestamps[stepIndex] == null && event.steps[stepIndex] == 1) {
+            for (int eventIndex = startIndex + 1; eventIndex < events.size(); eventIndex++) {
+                EventRow event = events.get(eventIndex);
+                
+                // 检查是否在时间窗口内
+                if (event.timestamp - stepTimestamps[0] > windowSeconds * 1000L) {
+                    break;
+                }
+                
+                // 检查当前事件是否可以作为当前步骤
+                if (event.steps[stepIndex] == 1) {
                     // 检查前一个步骤是否已找到
                     if (stepTimestamps[stepIndex - 1] != null) {
                         // 根据模式检查步骤间隔
                         if (isValidStepInterval(stepTimestamps[stepIndex - 1], event.timestamp, stepIntervalSeconds, mode)) {
-                            stepTimestamps[stepIndex] = event.timestamp;
-                            stepTags[stepIndex] = event.group;
+                            // 检查这个事件是否已经被使用（通过eventId检查）
+                            boolean eventUsed = false;
+                            for (int usedStep = 0; usedStep < stepIndex; usedStep++) {
+                                if (stepEventIds[usedStep] != null && stepEventIds[usedStep].equals(event.eventId)) {
+                                    eventUsed = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!eventUsed) {
+                                // 选择时间间隔最小的事件
+                                long interval = event.timestamp - stepTimestamps[stepIndex - 1];
+                                if (bestTimestamp == null || interval < (bestTimestamp - stepTimestamps[stepIndex - 1])) {
+                                    bestTimestamp = event.timestamp;
+                                    bestTag = event.group;
+                                    bestEventId = event.eventId;
+                                    bestEventIndex = eventIndex;
+                                }
+                            }
                         }
                     }
                 }
+            }
+            
+            // 如果找到了合适的事件，分配给当前步骤
+            if (bestTimestamp != null) {
+                stepTimestamps[stepIndex] = bestTimestamp;
+                stepTags[stepIndex] = bestTag;
+                stepEventIds[stepIndex] = bestEventId;
             }
         }
         
@@ -144,6 +210,7 @@ public class WindowFunnel extends UDF {
                     path.timeDiffs.add(stepTimestamps[i] - stepTimestamps[i-1]);
                 }
                 path.tags.add(stepTags[i]);
+                path.eventIds.add(stepEventIds[i]);
             }
         }
         
@@ -153,7 +220,7 @@ public class WindowFunnel extends UDF {
     /**
      * 构建回溯模式的路径
      */
-    private FunnelPath buildBacktrackPath(List<EventRow> events, int startIndex, int windowSeconds, int stepIntervalSeconds, int stepCount, String mode, Long[] stepTimestamps, String[] stepTags) {
+    private FunnelPath buildBacktrackPath(List<EventRow> events, int startIndex, int windowSeconds, int stepIntervalSeconds, int stepCount, String mode, Long[] stepTimestamps, String[] stepTags, String[] stepEventIds) {
         // 在时间窗口内找到所有事件
         List<EventRow> windowEvents = new ArrayList<>();
         long startTime = stepTimestamps[0];
@@ -168,6 +235,7 @@ public class WindowFunnel extends UDF {
         for (int stepIndex = 1; stepIndex < stepCount; stepIndex++) {
             Long bestTimestamp = null;
             String bestTag = null;
+            String bestEventId = null;
             long minInterval = Long.MAX_VALUE;
             
             for (EventRow event : windowEvents) {
@@ -177,6 +245,7 @@ public class WindowFunnel extends UDF {
                         minInterval = interval;
                         bestTimestamp = event.timestamp;
                         bestTag = event.group;
+                        bestEventId = event.eventId;
                     }
                 }
             }
@@ -184,6 +253,7 @@ public class WindowFunnel extends UDF {
             if (bestTimestamp != null) {
                 stepTimestamps[stepIndex] = bestTimestamp;
                 stepTags[stepIndex] = bestTag;
+                stepEventIds[stepIndex] = bestEventId;
             }
         }
         
@@ -201,6 +271,7 @@ public class WindowFunnel extends UDF {
                     path.timeDiffs.add(stepTimestamps[i] - stepTimestamps[i-1]);
                 }
                 path.tags.add(stepTags[i]);
+                path.eventIds.add(stepEventIds[i]);
             }
         }
         
@@ -253,7 +324,7 @@ public class WindowFunnel extends UDF {
 
         for (int i = 0; i < indices.size() - 1; i++) {
             String part = eventString.substring(indices.get(i), indices.get(i + 1));
-            EventRow event = parseSingleEvent(part.replaceAll("^,|,$", "")); // 去除首尾逗号
+            EventRow event = parseSingleEvent(part.replaceAll("^,|,$", ""), i); // 去除首尾逗号，传入索引作为UUID
             if (event != null) {
                 list.add(event);
             }
@@ -263,7 +334,7 @@ public class WindowFunnel extends UDF {
     
     
     // 解析单个事件
-    private EventRow parseSingleEvent(String part) {
+    private EventRow parseSingleEvent(String part, int index) {
         // 找到第一个#的位置（时间戳结束）
         int firstHashIndex = part.indexOf('#');
         if (firstHashIndex == -1) return null;
@@ -287,7 +358,10 @@ public class WindowFunnel extends UDF {
             steps[i] = "1".equals(stepStrs[i]) ? 1 : 0;
         }
         
-        return new EventRow(ts, steps, group);
+        // 生成事件UUID：使用时间戳+索引确保唯一性
+        String eventId = ts + "_" + index;
+        
+        return new EventRow(ts, steps, group, eventId);
     }
 
     // 解析时间戳 - 支持多种格式
@@ -310,10 +384,13 @@ public class WindowFunnel extends UDF {
         long timestamp;
         int[] steps;
         String group;
-        EventRow(long ts, int[] steps, String group) {
+        String eventId; // 事件唯一标识符
+        
+        EventRow(long ts, int[] steps, String group, String eventId) {
             this.timestamp = ts;
             this.steps = steps;
             this.group = group;
+            this.eventId = eventId;
         }
     }
     
@@ -322,6 +399,7 @@ public class WindowFunnel extends UDF {
         long firstTimestamp;
         List<Long> timeDiffs = new ArrayList<>();
         List<String> tags = new ArrayList<>();
+        List<String> eventIds = new ArrayList<>(); // 记录路径中使用的事件ID
         int stepCount;
     }
 } 

@@ -220,7 +220,7 @@ select '2024-01-02 00:00:03.012' as dt,'cjt' as uid,'iap' as event,'f@#,b' as gr
             group_concat(_event_string)
         ) as funnel_result
     FROM (
-        select 
+select 
             *,
             concat(dt,'#'
             ,event='reg'
