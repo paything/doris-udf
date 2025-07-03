@@ -315,17 +315,28 @@ function transformFunnelData(data) {
   funnelChartData.value = funnelData;
   console.log('漏斗图数据:', funnelData);
   
-  // 箱型图数据 - 包含所有分组数据
-  const boxData = data.map(row => ({
-    step: `步骤${row.funnel_level}`,
-    min: row.p0,
-    q1: row.p25,
-    median: row.p50,
-    q3: row.p75,
-    max: row.p100,
-    avg: row.avg_duration,
-    group0: row.group0  // 保留分组信息
-  }));
+  // 箱型图数据 - 显示步骤间的间隔时间，而不是每个步骤的耗时
+  // 过滤掉最后一个步骤，因为箱型图显示的是步骤间的间隔
+  const boxData = data
+    .filter(row => {
+      // 找到当前分组中最大的步骤数
+      const maxStepInGroup = Math.max(...data
+        .filter(r => r.group0 === row.group0)
+        .map(r => r.funnel_level)
+      );
+      // 只保留不是最后一个步骤的数据
+      return row.funnel_level < maxStepInGroup;
+    })
+    .map(row => ({
+      step: `步骤${row.funnel_level}→${row.funnel_level + 1}`, // 显示步骤间的间隔
+      min: row.p0,
+      q1: row.p25,
+      median: row.p50,
+      q3: row.p75,
+      max: row.p100,
+      avg: row.avg_duration,
+      group0: row.group0  // 保留分组信息
+    }));
   funnelBoxData.value = boxData;
   console.log('箱型图数据:', boxData);
   
@@ -735,7 +746,7 @@ function renderBoxChart() {
     color: ['#62CDFF', '#9E4784', '#FF6B6B', '#4ECDC4', '#45B7D1'],
     title: {
       visible: true,
-      text: '各步骤耗时分布'
+      text: '各步骤间间隔时间分布'
     },
     legends: {
       visible: true,
@@ -749,11 +760,11 @@ function renderBoxChart() {
     axes: [
       {
         orient: 'left',
-        title: { visible: true, text: '耗时(秒)' }
+        title: { visible: true, text: '间隔时间(秒)' }
       },
       {
         orient: 'bottom',
-        title: { visible: true, text: '漏斗步骤' }
+        title: { visible: true, text: '步骤间间隔' }
       }
     ],
     boxPlot: {
@@ -796,16 +807,16 @@ function renderBoxChartAsBar() {
     yField: 'avg',
     title: {
       visible: true,
-      text: '各步骤平均耗时'
+      text: '各步骤间平均间隔时间'
     },
     axes: [
       {
         orient: 'left',
-        title: { visible: true, text: '耗时(秒)' }
+        title: { visible: true, text: '间隔时间(秒)' }
       },
       {
         orient: 'bottom',
-        title: { visible: true, text: '漏斗步骤' }
+        title: { visible: true, text: '步骤间间隔' }
       }
     ]
   };
